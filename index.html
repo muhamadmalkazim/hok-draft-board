@@ -1036,9 +1036,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
    ────────────────────────────────────────────────────────────── */
 window.HOK_CONFIG = {
   supabase: {
-    url: "",        // contoh: "https://abcdefgh.supabase.co"
-    anonKey: "",    // kunci "anon public" dari Settings -> API
-    bucket: "hok"   // nama bucket storage, biarkan "hok"
+    url: "https://ppaynfxzcsrnjvjmfahr.supabase.co",
+    anonKey: "sb_publishable_ZnF3EbqfMXaIgSVVFWCKfA_gNKczGli",
+    bucket: "hok"
   }
 };
 
@@ -1168,13 +1168,14 @@ const localAssets = {
 /* Table expected (see supabase.sql):
      create table docs (path text primary key, data jsonb, updated_at timestamptz);
    Storage bucket expected: "hok" (public read). */
+/* Supabase accepts both the legacy anon JWT and the newer sb_publishable_ key;
+   both go in `apikey`, and both are accepted as a Bearer token. */
+function sbAuth(key, extra) {
+  return Object.assign({ apikey: key, Authorization: "Bearer " + key }, extra || {});
+}
 function supabaseStore(cfg) {
   const base = cfg.url.replace(/\/+$/, "");
-  const H = {
-    apikey: cfg.anonKey,
-    Authorization: "Bearer " + cfg.anonKey,
-    "Content-Type": "application/json"
-  };
+  const H = sbAuth(cfg.anonKey, { "Content-Type": "application/json" });
   const rest = base + "/rest/v1/docs";
   return {
     kind: "supabase",
@@ -1222,10 +1223,10 @@ function supabaseAssets(cfg) {
       const id = "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + "." + ext;
       const r = await fetch(base + "/storage/v1/object/" + bucket + "/" + id, {
         method: "POST",
-        headers: { apikey: cfg.anonKey, Authorization: "Bearer " + cfg.anonKey, "Content-Type": blob.type || "image/jpeg" },
+        headers: sbAuth(cfg.anonKey, { "Content-Type": blob.type || "image/jpeg" }),
         body: blob
       });
-      if (!r.ok) throw new Error("upload " + r.status);
+      if (!r.ok) throw new Error("upload " + r.status + " " + (await r.text().catch(()=>"")).slice(0,120));
       const url = base + "/storage/v1/object/public/" + bucket + "/" + id;
       urlCache.set(url, url);
       return { id: url };          /* the public URL is the key — imgSrc passes it through */
@@ -1243,6 +1244,11 @@ function initStore() {
   const cfg = (typeof HOK_CONFIG !== "undefined") ? HOK_CONFIG : null;
   if (cfg && cfg.supabase && cfg.supabase.url && cfg.supabase.anonKey
       && !/YOUR_|xxxx/i.test(cfg.supabase.url + cfg.supabase.anonKey)) {
+    if (/sb_secret_|service_role/.test(cfg.supabase.anonKey)) {
+      console.error("Kunci rahasia terpasang di config — hapus, ganti pakai publishable/anon key.");
+      storeNote = "Kunci salah — jangan pakai secret key.";
+      return storeKind;
+    }
     try {
       store = supabaseStore(cfg.supabase);
       assets = supabaseAssets(cfg.supabase);
