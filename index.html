@@ -1,0 +1,3298 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HOK Draft Board</title>
+<meta name="description" content="Papan draft Honor of Kings: ban &amp; pick, arsip scrim, counter/combo, papan taktik.">
+<meta name="theme-color" content="#e7e5dc">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127942;</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
+<style>
+/* reset that the artifact host used to provide */
+*{box-sizing:border-box}
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px/1.5 system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+
+/* Layout: tabbed shell — Draft (board + gallery) and Hero (editable roster list).
+   Surfaces separate by tone + soft lift, never by outline. */
+:root{
+  --paper:#e7e5dc;
+  --panel:#f5f3ec;
+  --raised:#fbfaf6;
+  --track:#eceadf;
+  --sunk:#dedbd0;
+  --ink:#1f2a24;
+  --ink-mid:#5d665f;
+  --ink-dim:#8c938b;
+  --hair:rgba(255,255,255,.8);
+  --gloss:inset 0 2px 0 rgba(255,255,255,.9);
+  --lift:0 30px 70px rgba(60,70,55,.14);
+  --lift-sm:0 10px 26px rgba(60,70,55,.10);
+  --lift-lg:0 16px 40px rgba(60,70,55,.20);
+  --blue:#2f6090;
+  --blue-deep:#1d4572;
+  --blue-tint:#dde6f0;
+  --red:#b4524a;
+  --red-deep:#8e3a34;
+  --red-tint:#f4e1da;
+  --lock:#8a6a1f;
+  --lock-tint:#efe6cd;
+  --prio:#d79a16;
+  --prio-tint:#fbeec6;
+  --prio-glow:rgba(255,206,92,.55);
+  --ctr:#d6433a;
+  --ctr-glow:rgba(255,106,96,.5);
+  --cmb:#2f7fd0;
+  --cmb-glow:rgba(96,172,255,.5);
+  --ok:#4a7a5c;
+  --ok-tint:#dde9e0;
+  --font:"Plus Jakarta Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#151816;
+    --panel:#20241f;
+    --raised:#282d26;
+    --track:#2b3129;
+    --sunk:#191d18;
+    --ink:#e9eae2;
+    --ink-mid:#a0a89f;
+    --ink-dim:#79817a;
+    --hair:rgba(255,255,255,.07);
+    --gloss:inset 0 1px 0 rgba(255,255,255,.08);
+    --lift:0 30px 70px rgba(0,0,0,.5);
+    --lift-sm:0 10px 26px rgba(0,0,0,.4);
+    --lift-lg:0 16px 40px rgba(0,0,0,.6);
+    --blue:#6ea3dc;
+    --blue-deep:#9cc2ec;
+    --blue-tint:#1e3047;
+    --red:#dd837a;
+    --red-deep:#eda49c;
+    --red-tint:#3d2420;
+    --lock:#d6ae5c;
+    --lock-tint:#352c16;
+    --prio:#ffc94d;
+    --prio-tint:#3a2e12;
+    --prio-glow:rgba(255,201,77,.55);
+    --ctr:#ff7a70;
+    --ctr-glow:rgba(255,122,112,.5);
+    --cmb:#5fb0ff;
+    --cmb-glow:rgba(95,176,255,.5);
+    --ok:#7fb795;
+    --ok-tint:#1f2e25;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#151816;
+  --panel:#20241f;
+  --raised:#282d26;
+  --track:#2b3129;
+  --sunk:#191d18;
+  --ink:#e9eae2;
+  --ink-mid:#a0a89f;
+  --ink-dim:#79817a;
+  --hair:rgba(255,255,255,.07);
+  --gloss:inset 0 1px 0 rgba(255,255,255,.08);
+  --lift:0 30px 70px rgba(0,0,0,.5);
+  --lift-sm:0 10px 26px rgba(0,0,0,.4);
+  --lift-lg:0 16px 40px rgba(0,0,0,.6);
+  --blue:#6ea3dc;
+  --blue-deep:#9cc2ec;
+  --blue-tint:#1e3047;
+  --red:#dd837a;
+  --red-deep:#eda49c;
+  --red-tint:#3d2420;
+  --lock:#d6ae5c;
+  --lock-tint:#352c16;
+  --prio:#ffc94d;
+  --prio-tint:#3a2e12;
+  --prio-glow:rgba(255,201,77,.55);
+  --ctr:#ff7a70;
+  --ctr-glow:rgba(255,122,112,.5);
+  --cmb:#5fb0ff;
+  --cmb-glow:rgba(95,176,255,.5);
+  --ok:#7fb795;
+  --ok-tint:#1f2e25;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+button{font-family:inherit;font-size:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select{font-family:inherit;font-size:14px;color:var(--ink);background:var(--raised);border:0;box-shadow:var(--gloss);border-radius:999px;padding:11px 18px;width:100%}
+input::placeholder{color:var(--ink-dim)}
+:focus-visible{outline:2.5px solid var(--ink);outline-offset:3px;border-radius:999px}
+html,body{height:100%}
+.wrap{height:100%;display:flex;flex-direction:column;gap:14px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:18px 18px;max-width:2100px;margin:0 auto}
+.view{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:14px}
+.view.scroll{overflow-y:auto;overflow-x:hidden;padding-right:4px;scrollbar-width:thin}
+.view.scroll > .card{flex:0 0 auto}
+
+/* two panes: draft on the left, the whole roster on the right */
+.panes{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:14px}
+.pane{min-width:0;min-height:0;display:flex;flex-direction:column;gap:14px}
+.pane.left{overflow-y:auto;overflow-x:hidden;padding-right:4px;scrollbar-width:thin}
+.pane.right{overflow:hidden}
+@media (max-width:1100px){
+  html,body{height:auto}
+  .wrap{height:auto;padding-block:18px 56px}
+  .view{min-height:0}
+  .panes{grid-template-columns:1fr;min-height:0}
+  .pane.left{overflow:visible;padding-right:0}
+  .pane.right{overflow:visible}
+  .grid{max-height:60vh}
+}
+.lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);font-weight:700}
+.num{font-variant-numeric:tabular-nums}
+.card{background:var(--panel);border-radius:26px;box-shadow:var(--lift-sm),var(--gloss);border:.8px solid var(--hair);padding:18px 20px}
+.card.flex{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+
+/* ---- masthead + tabs ---- */
+.mast{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-inline:6px}
+.mast h1{font-size:30px}
+.mast p{margin:3px 0 0;font-size:14.5px;color:var(--ink-mid)}
+.mast .sp{flex:1 1 auto;min-width:0}
+.tabs{display:flex;background:var(--track);border-radius:999px;padding:4px;gap:3px}
+.tabs button{border-radius:999px;padding:10px 22px;font-size:14px;font-weight:700;color:var(--ink-mid);transition:background .16s,color .16s}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--panel)}
+.pill{border-radius:999px;padding:9px 17px;font-size:13px;font-weight:600;color:var(--ink);background:var(--raised);box-shadow:var(--lift-sm),var(--gloss);transition:transform .1s,box-shadow .16s,background .16s,color .16s}
+.pill:hover{transform:translateY(-1px);box-shadow:var(--lift-lg),var(--gloss)}
+.pill:active{transform:translateY(0)}
+.pill.on{background:var(--ink);color:var(--panel);box-shadow:var(--lift-sm)}
+.pill[disabled]{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* ---- control bar ---- */
+.bar{display:flex;flex-direction:column;gap:14px}
+.barrow{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
+.fld{display:flex;flex-direction:column;gap:7px}
+.seg{display:flex;background:var(--track);border-radius:999px;padding:4px;gap:3px}
+.seg button{border-radius:999px;padding:8px 15px;font-size:13px;font-weight:600;color:var(--ink-mid);transition:background .16s,color .16s}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.seg button.b[aria-pressed="true"]{background:var(--blue);color:#fff}
+.seg button.r[aria-pressed="true"]{background:var(--red);color:#fff}
+.start{border-radius:999px;padding:13px 30px;font-size:14.5px;font-weight:700;background:var(--ink);color:var(--panel);box-shadow:var(--lift-sm);transition:transform .1s}
+.start:hover{transform:translateY(-1px)}
+.start.muted{background:var(--track);color:var(--ink-mid);box-shadow:none}
+
+.nowbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;gap:12px;
+  background:var(--ink);color:var(--panel);border-radius:999px;padding:11px 14px 11px 20px;box-shadow:var(--lift-lg)}
+.nowbar .dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.nowbar .dot.b{background:#6ea3dc} .nowbar .dot.r{background:#dd837a}
+.nowbar strong{font-weight:700;font-size:15px}
+.nowbar .what{font-size:14px;opacity:.78}
+.nowbar .ct{margin-left:auto;font-size:13px;opacity:.7;font-variant-numeric:tabular-nums}
+.nowbar button{border-radius:999px;padding:7px 15px;font-size:12.5px;font-weight:600;
+  background:rgba(255,255,255,.15);color:inherit;transition:background .16s}
+.nowbar button:hover{background:rgba(255,255,255,.28)}
+@media (max-width:520px){.nowbar .what{display:none}}
+
+.scoreboard{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;
+  background:var(--track);border-radius:20px;padding:13px 18px}
+.sc{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.sc .v{font-size:34px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.sc.onblue .v{color:var(--blue)} .sc.onred .v{color:var(--red)}
+.tname{font-size:13.5px;font-weight:700;text-align:center;background:var(--panel);box-shadow:none;
+  padding:9px 14px;border-radius:999px;width:100%;max-width:230px;transition:background .16s,box-shadow .16s;cursor:text}
+.tname:hover{background:var(--sunk)}
+.tname:focus{background:var(--raised);box-shadow:0 0 0 2px var(--ink)}
+.nmhint{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-dim);text-align:center}
+.sidechip{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;
+  padding:3px 10px;border-radius:999px;background:var(--track);color:var(--ink-dim)}
+.sidechip.b{background:var(--blue-tint);color:var(--blue-deep)}
+.sidechip.r{background:var(--red-tint);color:var(--red-deep)}
+.gamebox{text-align:center;display:flex;flex-direction:column;gap:7px;align-items:center;min-width:110px}
+.gamebox .g{font-size:12.5px;font-weight:700;color:var(--ink-mid)}
+.pips{display:flex;gap:5px;justify-content:center}
+.pip{width:18px;height:18px;border-radius:7px;background:var(--sunk);color:var(--ink-dim);
+  font-size:10.5px;font-weight:800;display:grid;place-items:center;line-height:1}
+.pip.won{background:var(--ink);color:var(--panel)}
+
+.sideset{display:flex;align-items:center;gap:9px}
+.sideset .who2{font-size:13px;font-weight:700;color:var(--ink-mid);white-space:nowrap}
+.sideset .who2 b{color:var(--blue-deep)}
+.swap{border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:700;background:var(--track);color:var(--ink-mid);transition:background .16s,color .16s;white-space:nowrap}
+.swap:hover{background:var(--ink);color:var(--panel)}
+.swap.auto[aria-pressed="true"]{background:var(--ok-tint);color:var(--ok)}
+.swap.auto[aria-pressed="true"]::before{content:"\2713 ";font-weight:800}
+.swap.auto[aria-pressed="false"]{opacity:.65}
+.swap.auto:hover{background:var(--ink);color:var(--panel);opacity:1}
+
+.hist{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+.hrec{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;
+  background:var(--track);border-radius:16px;padding:10px 15px;font-size:13.5px}
+.hrec .gno{font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:var(--ink-dim)}
+.hrec .win{font-weight:700}
+.hrec .as{font-size:12px;color:var(--ink-mid)}
+
+/* ---- board ---- */
+.board{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media (max-width:620px){.board{grid-template-columns:1fr}}
+.team{padding:16px 18px 18px;min-width:0}
+.team .hd{display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+.team .hd h2{font-size:17px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hdname{font-size:17px;font-weight:800;letter-spacing:-.02em;background:transparent;box-shadow:none;
+  padding:5px 11px;border-radius:12px;width:auto;flex:1 1 auto;min-width:0;max-width:100%;
+  transition:background .16s,box-shadow .16s;cursor:text}
+.hdname:hover{background:var(--track)}
+.hdname:focus{background:var(--raised);box-shadow:0 0 0 2px currentColor}
+.team.b .hdname{color:var(--blue-deep)} .team.r .hdname{color:var(--red-deep)}
+.editcue{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--ink-dim);
+  opacity:0;transition:opacity .16s;white-space:nowrap}
+.team .hd:hover .editcue{opacity:1}
+.team.b .hd h2{color:var(--blue-deep)} .team.r .hd h2{color:var(--red-deep)}
+.team .hd .fp{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:5px 11px;border-radius:999px;color:var(--ink-mid);background:var(--track)}
+.team .hd .cnt{margin-left:auto;font-size:13px;color:var(--ink-dim);font-variant-numeric:tabular-nums;font-weight:600}
+.banrow{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.bans{display:flex;gap:6px}
+.ban{width:36px;height:36px;border-radius:12px;background:var(--sunk);position:relative;overflow:hidden;flex:0 0 auto}
+.ban.fill .ph{filter:grayscale(1) contrast(.85);opacity:.55}
+.ban.fill::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,transparent 43%,var(--red) 44%,var(--red) 56%,transparent 57%)}
+.ban.cur{box-shadow:0 0 0 3px var(--ink)}
+.picks{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.slot{min-width:0;display:flex;flex-direction:column;gap:6px;padding:0;background:none;text-align:inherit}
+.slot.tap{cursor:pointer}
+.slot.tap:hover .box{box-shadow:0 0 0 2px var(--ink-dim),var(--lift-sm)}
+.slot .box{position:relative;aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:var(--sunk);box-shadow:var(--lift-sm);transition:box-shadow .18s,transform .14s}
+.slot .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.slot .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.slot .mono{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.03em;text-shadow:0 1px 4px rgba(0,0,0,.35)}
+.slot .dt{position:absolute;top:7px;right:7px;font-size:9px;font-weight:800;letter-spacing:.07em;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.94);color:#1f2a24}
+.slot .nm{font-size:12px;font-weight:600;line-height:1.25;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-inline:2px}
+.slot.vacant .box{background:var(--track);box-shadow:none}
+.slot.vacant .idx{font-size:26px;font-weight:700;color:var(--ink-dim);opacity:.35}
+.slot.vacant .nm{color:var(--ink-dim);font-weight:500}
+.team.b .slot.live .box{box-shadow:0 0 0 3.5px var(--blue),var(--lift-sm)}
+.team.r .slot.live .box{box-shadow:0 0 0 3.5px var(--red),var(--lift-sm)}
+.slot.just .box{animation:pop .32s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes pop{from{transform:scale(.88);opacity:.2}to{transform:scale(1);opacity:1}}
+
+/* ---- status strip ---- */
+.spine{padding:14px 18px 16px;display:flex;flex-direction:column;gap:13px}
+.turn{border-radius:16px;padding:12px 18px;box-shadow:var(--gloss);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.turn .who{font-size:19px;font-weight:800;line-height:1.1;letter-spacing:-.02em;min-width:0}
+.turn .act{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;opacity:.85;
+  background:rgba(255,255,255,.18);padding:5px 12px;border-radius:999px}
+.turn.idle .act{background:var(--sunk)}
+.turn .step{margin-left:auto;font-size:13px;font-weight:700;opacity:.75;font-variant-numeric:tabular-nums}
+.turn.b{background:var(--blue);color:#fff} .turn.r{background:var(--red);color:#fff}
+.turn.idle{background:var(--track);color:var(--ink-mid)}
+.turn.idle .who{font-size:16px}
+.rail{display:flex;gap:12px}
+.phase{display:flex;flex-direction:column;gap:5px;min-width:0}
+.phase .pn{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.phase .pn b{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:var(--ink-dim);white-space:nowrap}
+.phase .pn i{font-style:normal;font-size:10px;color:var(--ink-dim);font-variant-numeric:tabular-nums;font-weight:700}
+.ticks{display:flex;gap:3px}
+.tk{flex:1;height:7px;border-radius:999px;background:var(--sunk);transition:background .22s}
+.tk.b{background:var(--blue)} .tk.r{background:var(--red)}
+.tk.now{background:var(--ink);animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.4}}
+.hint{font-size:12.5px;color:var(--ink-mid);line-height:1.45;margin:0}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.winq{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:var(--track);border-radius:16px;padding:12px 16px}
+.wbtns{display:flex;gap:8px;flex:1 1 auto;min-width:0}
+.wbtns button{flex:1;border-radius:999px;padding:11px 10px;font-size:13.5px;font-weight:700;background:var(--raised);box-shadow:var(--lift-sm),var(--gloss);transition:background .16s,color .16s,transform .1s;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wbtns button.b{color:var(--blue-deep)} .wbtns button.r{color:var(--red-deep)}
+.wbtns button:hover{transform:translateY(-1px)}
+.wbtns button.b:hover{background:var(--blue);color:#fff}
+.wbtns button.r:hover{background:var(--red);color:#fff}
+
+/* ---- comparison ---- */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:34px}
+@media (max-width:760px){.compare{grid-template-columns:1fr;gap:26px}}
+.cmp h3{font-size:12px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;margin-bottom:14px}
+.cmp.b h3{color:var(--blue-deep)} .cmp.r h3{color:var(--red-deep)}
+.lanes{display:flex;gap:7px;margin-bottom:16px}
+.ln{flex:1;text-align:center;font-size:11px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;padding:9px 2px;border-radius:999px;background:var(--track);color:var(--ink-dim);transition:background .22s,color .22s}
+.ln.on{background:var(--ok-tint);color:var(--ok)}
+.dmg{display:flex;height:11px;border-radius:999px;overflow:hidden;background:var(--track);margin-bottom:12px}
+.dmg i{display:block;transition:width .32s}
+.dmg i.p{background:var(--blue)} .dmg i.m{background:var(--lock)} .dmg i.u{background:var(--sunk)}
+.dmgkey{display:flex;gap:16px;font-size:13px;color:var(--ink-mid);flex-wrap:wrap}
+.dmgkey b{font-weight:700;color:var(--ink)}
+.flags{display:flex;flex-direction:column;gap:7px;margin-top:14px}
+.flag{font-size:13px;color:var(--lock);display:flex;gap:9px;line-height:1.45;align-items:flex-start}
+.flag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lock);flex:0 0 auto;margin-top:7px}
+
+/* ---- draft gallery: square tiles, name over the art so the whole roster fits ---- */
+.galbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;flex:0 0 auto}
+.galbar .search{flex:1 1 180px;min-width:0}
+.galbar input[type=search]{padding:9px 16px}
+.galcount{font-size:12.5px;color:var(--ink-dim);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pills{display:flex;gap:5px;flex-wrap:wrap}
+.pills button{border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;color:var(--ink-mid);background:var(--track);transition:background .16s,color .16s}
+.pills button:hover{color:var(--ink)}
+.pills button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.grid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tile,94px),1fr));
+  gap:8px;align-content:start;overflow-y:auto;padding:2px 4px 6px;scrollbar-width:thin}
+.dens{display:flex;background:var(--track);border-radius:999px;padding:3px;gap:2px}
+.dens button{border-radius:999px;width:28px;height:26px;font-size:11.5px;font-weight:800;color:var(--ink-dim);transition:background .16s,color .16s}
+.dens button:hover{color:var(--ink)}
+.dens button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.hc{position:relative;aspect-ratio:1/1;border-radius:16px;overflow:hidden;background:var(--sunk);
+  box-shadow:var(--lift-sm);transition:transform .12s,box-shadow .16s;padding:0}
+.hc .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.hc .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.hc .mono{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.03em;text-shadow:0 1px 4px rgba(0,0,0,.35)}
+.hc .cn{position:absolute;left:0;right:0;bottom:0;padding:18px 6px 6px;font-size:11.5px;font-weight:700;
+  line-height:1.15;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);
+  background:linear-gradient(to top,rgba(0,0,0,.86),rgba(0,0,0,.52) 55%,transparent);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+/* three glows: gold = priority, red = counter in play, blue = combo in play.
+   Ring takes the strongest contextual signal; badges stack so nothing is hidden. */
+.hc.glow{box-shadow:0 0 0 2.5px var(--ring),0 0 18px var(--sheenc),var(--lift-sm)}
+.hc.glow::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(115deg,transparent 34%,var(--sheenc) 46%,transparent 58%);
+  background-size:300% 100%;animation:sheen 2.8s linear infinite}
+@keyframes sheen{from{background-position:140% 0}to{background-position:-60% 0}}
+.hc.gl-prio{--ring:var(--prio);--sheenc:var(--prio-glow)}
+.hc.gl-ctr{--ring:var(--ctr);--sheenc:var(--ctr-glow)}
+.hc.gl-cmb{--ring:var(--cmb);--sheenc:var(--cmb-glow)}
+.hc .marks{position:absolute;top:4px;right:4px;z-index:3;display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.mk{min-width:18px;height:18px;padding:0 5px;border-radius:999px;font-size:10px;font-weight:800;
+  display:grid;place-items:center;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.mk.p{background:var(--prio);color:#2a1f05}
+.mk.c{background:var(--ctr);color:#fff}
+.mk.k{background:var(--cmb);color:#fff}
+.hc.glow.off,.hc.glow.locked,.hc.glow.waste{box-shadow:var(--lift-sm)}
+.hc.glow.off::before,.hc.glow.locked::before,.hc.glow.waste::before{display:none}
+.hc:hover:not(.off):not(.locked){transform:translateY(-2px);box-shadow:var(--lift-lg)}
+.hc.glow:hover:not(.off):not(.locked){box-shadow:0 0 0 2.5px var(--ring),0 0 26px var(--sheenc),var(--lift-lg)}
+
+.legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:11px;
+  background:var(--track);border-radius:999px;padding:8px 16px;font-size:11.5px;font-weight:700;color:var(--ink-mid)}
+.legend i{display:inline-flex;align-items:center;gap:6px;font-style:normal;white-space:nowrap}
+.legend i::before{content:"";width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.legend i.p::before{background:var(--prio);box-shadow:0 0 7px var(--prio-glow)}
+.legend i.c::before{background:var(--ctr);box-shadow:0 0 7px var(--ctr-glow)}
+.legend i.k::before{background:var(--cmb);box-shadow:0 0 7px var(--cmb-glow)}
+.hc.off{opacity:.26;cursor:not-allowed}
+.hc.off .ph::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,transparent 45%,#fff 46%,#fff 54%,transparent 55%);opacity:.5}
+/* a ban the opponent is already locked out of: dimmed and labelled, still clickable */
+.hc.waste .ph{opacity:.4;filter:grayscale(.9)}
+.hc.waste .cn{color:var(--ink-dim)}
+.hc.waste::after{content:"SIA-SIA";position:absolute;top:4px;left:4px;font-size:7.5px;font-weight:800;
+  letter-spacing:.08em;background:var(--ink-dim);color:var(--panel);padding:2px 6px;border-radius:999px;z-index:2}
+.hc.waste.prio{box-shadow:var(--lift-sm)}
+.hc.waste.prio::before{display:none}
+.hc.locked{cursor:not-allowed}
+.hc.locked .ph{opacity:.4;filter:grayscale(.85)}
+.hc.locked .cn{color:var(--lock);background:linear-gradient(to top,rgba(0,0,0,.88),transparent)}
+.hc.locked::after{content:"GBP";position:absolute;top:4px;left:4px;font-size:8px;font-weight:800;letter-spacing:.08em;background:var(--lock);color:#fff;padding:2px 6px;border-radius:999px;z-index:2}
+.gridempty{grid-column:1/-1;padding:44px 10px;text-align:center;color:var(--ink-dim);font-size:14px}
+
+/* ---- hero tab ---- */
+.hhead{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.hhead h2{font-size:22px}
+.hhead p{margin:4px 0 0;font-size:14px;color:var(--ink-mid)}
+.hhead .sp{flex:1 1 auto;min-width:0}
+.hhead .acts2{display:flex;gap:9px;flex-wrap:wrap}
+.meters{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px}
+@media (max-width:620px){.meters{grid-template-columns:1fr;gap:14px}}
+.meter{background:var(--track);border-radius:20px;padding:16px 18px}
+.meter .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+.meter .top b{font-size:13px;font-weight:700}
+.meter .top span{font-size:13px;color:var(--ink-mid);font-variant-numeric:tabular-nums;font-weight:600}
+.meter .track2{height:9px;border-radius:999px;background:var(--sunk);overflow:hidden}
+.meter .track2 i{display:block;height:100%;background:var(--ok);transition:width .35s}
+.hbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.hbar .search{flex:1 1 220px;min-width:0}
+.hlist{display:flex;flex-direction:column;gap:8px;max-height:62vh;overflow-y:auto;padding:3px 3px 10px}
+.hstar{border-radius:50%;width:34px;height:34px;display:grid;place-items:center;font-size:15px;line-height:1;
+  color:var(--ink-dim);background:var(--panel);transition:background .14s,color .14s,box-shadow .14s}
+.hstar:hover{color:var(--prio)}
+.hstar[aria-pressed="true"]{background:var(--prio);color:#2a1f05;box-shadow:0 0 12px var(--prio-glow)}
+.hrow{display:grid;grid-template-columns:56px minmax(140px,1.4fr) auto 134px 34px 40px;gap:12px;align-items:center;
+  background:var(--raised);border-radius:20px;padding:10px 14px 10px 10px;box-shadow:var(--gloss);transition:box-shadow .16s}
+.hrow:hover{box-shadow:var(--lift-sm),var(--gloss)}
+.hrow.drop{box-shadow:0 0 0 2.5px var(--blue),var(--lift-sm)}
+@media (max-width:860px){
+  .hrow{grid-template-columns:56px 1fr 34px 40px;grid-template-areas:"thumb name star del" "thumb lanes lanes lanes" "thumb dmg dmg dmg";row-gap:9px}
+  .hrow .hthumb{grid-area:thumb;align-self:start}
+  .hrow .hname{grid-area:name} .hrow .hlanes{grid-area:lanes} .hrow .hdmg{grid-area:dmg}
+  .hrow .hstar{grid-area:star} .hrow .hdel{grid-area:del}
+}
+.hthumb{width:56px;height:56px;border-radius:16px;overflow:hidden;position:relative;background:var(--sunk);flex:0 0 auto;padding:0;box-shadow:var(--lift-sm)}
+.hthumb .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.hthumb .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.hthumb .mono{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.03em;text-shadow:0 1px 4px rgba(0,0,0,.35)}
+.hthumb::after{content:"";position:absolute;inset:0;background:var(--ink);opacity:0;transition:opacity .16s}
+.hthumb:hover::after{opacity:.35}
+.hthumb .cam{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:opacity .16s;z-index:2;
+  color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.05em}
+.hthumb:hover .cam{opacity:1}
+.hname{border-radius:12px;padding:9px 13px;font-weight:600;background:var(--panel);box-shadow:none}
+.hlanes{display:flex;gap:5px;flex-wrap:wrap}
+.hlanes button{border-radius:999px;padding:6px 11px;font-size:11.5px;font-weight:700;letter-spacing:.03em;
+  background:var(--panel);color:var(--ink-dim);transition:background .14s,color .14s}
+.hlanes button:hover{color:var(--ink)}
+.hlanes button[aria-pressed="true"]{background:var(--ok-tint);color:var(--ok)}
+.hdmg{border-radius:12px;padding:9px 12px;font-size:13px;font-weight:600;background:var(--panel);box-shadow:none;appearance:none}
+.hdmg.unset{color:var(--ink-dim)}
+.hdel{border-radius:50%;width:34px;height:34px;display:grid;place-items:center;font-size:17px;line-height:1;
+  color:var(--ink-dim);background:var(--panel);transition:background .14s,color .14s}
+.hdel:hover{background:var(--red);color:#fff}
+.hdel.ghost{visibility:hidden}
+.hempty{padding:44px 10px;text-align:center;color:var(--ink-dim);font-size:14px}
+.nag{background:var(--lock-tint);color:var(--lock);border-radius:18px;padding:14px 18px;font-size:13.5px;line-height:1.5;margin-bottom:20px}
+
+/* ---- gbp ---- */
+.gbp > h3{font-size:12px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-mid);margin-bottom:8px}
+.gbp .note{font-size:13.5px;color:var(--ink-mid);line-height:1.55;max-width:66ch;margin:0}
+.gbpcols{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:20px}
+@media (max-width:620px){.gbpcols{grid-template-columns:1fr;gap:18px}}
+/* ---- per-game draft replay ---- */
+.gpv{display:flex;flex-direction:column;gap:11px;margin-top:14px}
+.gcard{background:var(--track);border-radius:20px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.gcard .gh{display:flex;align-items:center;gap:10px}
+.gcard .gh b{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:800;color:var(--ink-dim)}
+.gcard .gh .w{margin-left:auto;font-size:12.5px;font-weight:700;background:var(--panel);
+  padding:4px 12px;border-radius:999px}
+.gteams{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:700px){.gteams{grid-template-columns:1fr;gap:14px}}
+.gteam{display:flex;flex-direction:column;gap:9px;min-width:0}
+.gteam .gt{display:flex;align-items:center;gap:8px;min-width:0}
+.gteam .gt .tn{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.gsets{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.gnone{font-size:11px;color:var(--ink-dim);font-style:italic;padding-top:7px}
+.gset{display:flex;flex-direction:column;gap:5px;min-width:0}
+.gset .k{font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--ink-dim)}
+.gthumbs{display:flex;gap:5px;flex-wrap:wrap}
+.gth{width:30px;height:30px;border-radius:10px;overflow:hidden;position:relative;background:var(--sunk);flex:0 0 auto}
+.gth .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.gth .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.gth .mono{font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.gth.ban .ph{filter:grayscale(1) contrast(.85);opacity:.5}
+.gth.ban::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent 42%,var(--red) 43%,var(--red) 57%,transparent 58%)}
+.gpick{width:46px;display:flex;flex-direction:column;gap:4px;flex:0 0 auto}
+.gpick .gth{width:46px;height:46px;border-radius:12px}
+.gpick .pn2{font-size:9px;font-weight:700;line-height:1.1;color:var(--ink-mid);text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- crop dialog ---- */
+.modal{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(20,24,20,.62);
+  padding:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));backdrop-filter:blur(3px)}
+.sheet{background:var(--panel);border-radius:30px;box-shadow:var(--lift),var(--gloss);border:.8px solid var(--hair);
+  padding:24px 26px 22px;width:min(420px,100%);display:flex;flex-direction:column;gap:14px;max-height:92vh;overflow:auto}
+.sheet h3{font-size:19px}
+.sheet .note{margin:0;font-size:13px;color:var(--ink-mid);line-height:1.5}
+.cropbox{position:relative;width:100%;aspect-ratio:1/1;border-radius:20px;overflow:hidden;background:var(--sunk);
+  touch-action:none;cursor:grab}
+.cropbox:active{cursor:grabbing}
+.cropbox canvas{display:block;width:100%;height:100%}
+.cropbox .ring{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.55);border-radius:20px}
+.cropbox .ring::before,.cropbox .ring::after{content:"";position:absolute;background:rgba(255,255,255,.28)}
+.cropbox .ring::before{left:33.33%;right:33.33%;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.28);border-right:1px solid rgba(255,255,255,.28);background:none}
+.cropbox .ring::after{top:33.33%;bottom:33.33%;left:0;right:0;border-top:1px solid rgba(255,255,255,.28);border-bottom:1px solid rgba(255,255,255,.28);background:none}
+.zoomrow{display:flex;align-items:center;gap:12px}
+.zoomrow .lbl{flex:0 0 auto}
+input[type=range]{-webkit-appearance:none;appearance:none;background:var(--track);height:7px;border-radius:999px;padding:0;box-shadow:none;flex:1;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--ink);box-shadow:var(--lift-sm);cursor:grab}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radius:50%;background:var(--ink);cursor:grab}
+.sheet .foot{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap}
+
+/* ---- relations page ---- */
+.pill.sm{padding:6px 13px;font-size:12px}
+.note.sm{font-size:11.5px;margin-top:8px}
+.subj{display:flex;align-items:center;gap:14px;background:var(--track);border-radius:20px;padding:12px 16px;margin-bottom:16px}
+.subj .sav{width:58px;height:58px;border-radius:16px;overflow:hidden;position:relative;background:var(--sunk);flex:0 0 auto}
+.subj .sav .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.subj .sav .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.subj .sav .mono{font-size:20px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.subj .meta2{min-width:0;display:flex;flex-direction:column;gap:3px}
+.subj .meta2 b{font-size:17px;font-weight:800;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.subj .meta2 span{font-size:12.5px;color:var(--ink-mid)}
+.subj .chg{margin-left:auto;flex:0 0 auto}
+.subj.empty{color:var(--ink-mid);font-size:13.5px;justify-content:center;padding:22px 16px;text-align:center}
+.relbox{background:var(--track);border-radius:20px;padding:14px 16px 16px;margin-bottom:12px}
+.relhd{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.relhd .lbl{flex:1 1 auto}
+.chips2{display:flex;gap:8px;flex-wrap:wrap}
+.rchip{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;background:var(--panel);
+  border-radius:999px;padding:4px 6px 4px 4px;font-weight:700;max-width:100%;box-shadow:var(--gloss)}
+.rchip .cav{width:28px;height:28px;border-radius:50%;overflow:hidden;flex:0 0 auto;position:relative;background:var(--sunk)}
+.rchip .cav .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.rchip .cav .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.rchip .cav .mono{font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.rchip .nm2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rchip .x{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:14px;line-height:1;
+  color:var(--ink-dim);flex:0 0 auto;transition:background .14s,color .14s}
+.rchip .x:hover{background:var(--red);color:#fff}
+.rchip.ro{padding-right:13px}
+.chips2 .none{color:var(--ink-dim);font-size:12.5px;font-style:italic}
+.saved{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;white-space:nowrap;
+  color:var(--ok);background:var(--ok-tint);padding:7px 14px;border-radius:999px;flex:0 0 auto}
+.saved.flash{animation:savedpulse .45s ease-out}
+@keyframes savedpulse{0%{transform:scale(1)}38%{transform:scale(1.07)}100%{transform:scale(1)}}
+.armnote{font-size:12.5px;font-weight:600;color:var(--ink-mid);margin:0 0 11px;
+  background:var(--track);border-radius:999px;padding:8px 16px}
+.armnote.on{background:var(--prio-tint);color:var(--prio)}
+.hc.inlist{box-shadow:0 0 0 2.5px var(--ok),var(--lift-sm)}
+.hc.inlist::after{content:"\2713";position:absolute;top:4px;right:4px;z-index:2;width:18px;height:18px;border-radius:50%;
+  background:var(--ok);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;line-height:1}
+.hc.subjnow{opacity:.35;cursor:not-allowed}
+
+/* ---- save state banner ---- */
+.savebar{display:flex;align-items:center;gap:12px;padding:13px 18px;flex-wrap:wrap}
+.savebar .sdot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:var(--lock)}
+.savebar.done .sdot{background:var(--ok)}
+.savebar .stxt{font-size:13px;font-weight:600;color:var(--ink-mid);min-width:0;flex:1 1 auto;line-height:1.45}
+.savebar.done .stxt{color:var(--ok)}
+.savebar .stxt b{color:var(--ink);font-weight:700}
+.savebar.done .stxt b{color:var(--ok)}
+
+/* ---- draft suggestions ---- */
+.sug{padding:14px 18px 16px}
+.sughd{display:flex;align-items:baseline;gap:10px;margin-bottom:11px;flex-wrap:wrap}
+.sughd h3{font-size:12px;letter-spacing:.13em;text-transform:uppercase;font-weight:800;color:var(--ink-mid)}
+.sugnote{font-size:12px;color:var(--ink-dim)}
+.sugrow{margin-bottom:12px}
+.sugrow:last-child{margin-bottom:0}
+.sugrow .k{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--ink-dim);margin-bottom:7px}
+.sugs{display:flex;gap:7px;flex-wrap:wrap}
+.sugp{width:52px;display:flex;flex-direction:column;gap:4px;position:relative;padding:0;background:none;transition:transform .12s}
+.sugp:hover{transform:translateY(-2px)}
+.sugp .box2{position:relative;width:52px;height:52px;border-radius:14px;overflow:hidden;background:var(--sunk);box-shadow:var(--lift-sm)}
+.sugp .box2 .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.sugp .box2 .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.sugp .box2 .mono{font-size:17px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.sugp .n{position:absolute;top:-4px;right:-4px;z-index:2;min-width:18px;height:18px;padding:0 5px;border-radius:999px;
+  background:var(--ink);color:var(--panel);font-size:10.5px;font-weight:800;display:grid;place-items:center;line-height:1}
+.sugp .pn2{font-size:9px;font-weight:700;line-height:1.1;color:var(--ink-mid);text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sugempty{font-size:12.5px;color:var(--ink-dim);font-style:italic}
+
+/* ---- board ---- */
+.panes.wide{grid-template-columns:minmax(0,1.75fr) minmax(0,1fr)}
+.btools{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.swatches{display:flex;gap:5px;background:var(--track);border-radius:999px;padding:4px}
+.sw{width:26px;height:26px;border-radius:50%;border:2.5px solid transparent;transition:transform .12s}
+.sw:hover{transform:scale(1.1)}
+.sw[aria-pressed="true"]{border-color:var(--ink);transform:scale(1.08)}
+.widths{display:flex;gap:3px;background:var(--track);border-radius:999px;padding:4px}
+.widths button{width:30px;height:26px;border-radius:999px;display:grid;place-items:center;transition:background .14s}
+.widths button[aria-pressed="true"]{background:var(--ink)}
+.widths button i{display:block;background:var(--ink-mid);border-radius:999px}
+.widths button[aria-pressed="true"] i{background:var(--panel)}
+.boardwrap{position:relative;width:100%;aspect-ratio:var(--bar,1.55);max-height:var(--bmax,calc(100vh - 275px));
+  margin:0 auto;border-radius:20px;overflow:hidden;
+  background:var(--sunk);box-shadow:var(--lift-sm);touch-action:none;user-select:none}
+.boardbg{position:absolute;inset:0;pointer-events:none}
+.boardbg img{width:100%;height:100%;object-fit:fill;display:block}
+.boardwrap:fullscreen{max-height:100vh;height:100vh;width:auto;border-radius:0}
+.boardwrap:fullscreen .boardbg img{object-fit:contain}
+.bhint{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;gap:7px;
+  align-items:center;justify-content:center;pointer-events:none;text-align:center;padding:20px}
+.bhint b{font-size:16px;font-weight:800;color:#e9eae2}
+.bhint span{font-size:13px;color:#9ba69e;max-width:34ch;line-height:1.5}
+.boardcv{position:absolute;inset:0;width:100%;height:100%;z-index:4}
+.boardcv.pen{cursor:crosshair} .boardcv.erase{cursor:cell} .boardcv.move{cursor:default;pointer-events:none}
+.tok{position:absolute;width:46px;height:46px;transform:translate(-50%,-50%);border-radius:50%;overflow:hidden;
+  cursor:grab;z-index:6;padding:0;background:var(--sunk);touch-action:none}
+.tok .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;border-radius:50%}
+.tok .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.tok .mono{font-size:16px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.tok.b{box-shadow:0 0 0 3px #4d92d9,0 3px 10px rgba(0,0,0,.55)}
+.tok.r{box-shadow:0 0 0 3px #e0645c,0 3px 10px rgba(0,0,0,.55)}
+.tok.n{box-shadow:0 0 0 3px #f0ead8,0 3px 10px rgba(0,0,0,.55)}
+.tok.drag{cursor:grabbing;z-index:9;transform:translate(-50%,-50%) scale(1.08)}
+.boardnote{font-size:12.5px;color:var(--ink-mid);margin:11px 0 0;line-height:1.5}
+.bsel{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.bsel select{width:auto;min-width:150px;padding:9px 14px;appearance:none}
+.tsides{display:flex;background:var(--track);border-radius:999px;padding:4px;gap:3px}
+.tsides button{border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;color:var(--ink-mid);transition:background .14s,color .14s}
+.tsides button[aria-pressed="true"]{color:#fff}
+.tsides button.b[aria-pressed="true"]{background:#4d92d9}
+.tsides button.r[aria-pressed="true"]{background:#e0645c}
+.tsides button.n[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+
+/* ---- teams ---- */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.tcard{background:var(--track);border-radius:22px;padding:16px 18px 18px;display:flex;flex-direction:column;gap:13px}
+.tctop{display:flex;align-items:center;gap:12px}
+.tlogo{width:54px;height:54px;border-radius:16px;overflow:hidden;position:relative;background:var(--sunk);
+  flex:0 0 auto;padding:0;box-shadow:var(--lift-sm)}
+.tlogo .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.tlogo .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.tlogo .mono{font-size:18px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.tlogo::after{content:"";position:absolute;inset:0;background:var(--ink);opacity:0;transition:opacity .16s}
+.tlogo:hover::after{opacity:.35}
+.tlogo .cam{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:opacity .16s;z-index:2;
+  color:#fff;font-size:10px;font-weight:800;letter-spacing:.05em}
+.tlogo:hover .cam{opacity:1}
+.tcname{font-size:15px;font-weight:800;background:var(--panel);box-shadow:none;border-radius:12px;padding:9px 13px}
+.plist{display:flex;flex-direction:column;gap:6px}
+.prow{display:grid;grid-template-columns:1fr 92px 30px;gap:6px;align-items:center}
+.prow input,.prow select{background:var(--panel);box-shadow:none;border-radius:10px;padding:7px 11px;font-size:12.5px}
+.prow select{appearance:none}
+.px{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;line-height:1;
+  color:var(--ink-dim);background:var(--panel);transition:background .14s,color .14s}
+.px:hover{background:var(--red);color:#fff}
+.tfoot{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:2px}
+.tfoot .sp{flex:1 1 auto}
+.thist{font-size:12px;color:var(--ink-mid);line-height:1.5}
+.thist b{color:var(--ink)}
+.hitem{display:flex;flex-direction:column;gap:7px}
+.srow{display:flex;align-items:center;gap:9px;background:var(--panel);border-radius:12px;padding:9px 13px;
+  font-size:12.5px;width:100%;text-align:left;transition:background .14s}
+.srow:hover{background:var(--sunk)}
+.srow b.wn{color:var(--ok)} .srow b.ls{color:var(--red)}
+.srow .d{color:var(--ink-dim);font-size:11.5px;margin-left:auto;white-space:nowrap}
+.srow .chev{color:var(--ink-dim);font-size:16px;line-height:1;transition:transform .16s;flex:0 0 auto}
+.srow.open .chev{transform:rotate(90deg)}
+.hbody{display:flex;flex-direction:column;gap:9px;padding:4px 2px 8px}
+.hg{background:var(--panel);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.hgh{display:flex;align-items:center;gap:8px}
+.hgh b{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:var(--ink-dim)}
+.hgh .wl{font-size:11.5px;font-weight:700;margin-left:auto}
+.hgh .wl.wn{color:var(--ok)} .hgh .wl.ls{color:var(--red)}
+.hgr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hgr .k2{font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:var(--ink-dim);
+  flex:0 0 62px}
+.hgr .gth{width:28px;height:28px;border-radius:9px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(26px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:13px 26px;border-radius:999px;font-size:14px;font-weight:600;z-index:60;box-shadow:var(--lift-lg);animation:rise .22s ease-out;max-width:86vw;text-align:center}
+@keyframes rise{from{transform:translateX(-50%) translateY(10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* standalone-only */
+.warnstore{background:var(--lock-tint);color:var(--lock)}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <h1>HOK Draft Board</h1>
+      <p>Latihan draft Honor of Kings — 4 ban, 5 pick, GBP terkunci per tim.</p>
+    </div>
+    <span class="sp"></span>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabDraft" aria-selected="true">Draft</button>
+      <button role="tab" id="tabHero" aria-selected="false">Hero</button>
+      <button role="tab" id="tabRel" aria-selected="false">Relasi</button>
+      <button role="tab" id="tabBoard" aria-selected="false">Papan</button>
+      <button role="tab" id="tabTeam" aria-selected="false">Tim</button>
+    </div>
+    <span class="saved" id="storeBadge">…</span>
+    <button class="pill" id="btnTheme">Mode gelap</button>
+  </header>
+
+  <!-- ============ DRAFT ============ -->
+  <div class="view" id="viewDraft">
+   <div class="panes">
+    <div class="pane left">
+    <section class="card bar">
+     <div class="barrow">
+      <div class="fld">
+        <span class="lbl">Format seri</span>
+        <div class="seg" id="segFormat"></div>
+      </div>
+      <div class="fld">
+        <span class="lbl">Mode</span>
+        <div class="seg" id="segMode">
+          <button data-v="bp" aria-pressed="true">Ban &amp; Pick</button>
+          <button data-v="arsip" aria-pressed="false">Arsip</button>
+        </div>
+      </div>
+      <div class="fld">
+        <span class="lbl">Sisi game ini</span>
+        <div class="sideset">
+          <span class="who2" id="sideWho"></span>
+          <button class="swap" id="btnSwap">Tukar sisi</button>
+          <button class="swap auto" id="btnAuto" aria-pressed="true" title="Kalau nyala, sisi tukar sendiri tiap ganti game">Auto tukar</button>
+        </div>
+      </div>
+      <button class="start" id="btnStart">Mulai game</button>
+     </div>
+     <div class="scoreboard">
+        <div class="sc" id="sc1">
+          <input type="text" class="tname" id="name1" list="teamList" autocomplete="off" aria-label="Tim pertama" maxlength="28" placeholder="Pilih / tulis tim" title="Pilih tim terdaftar atau tulis nama baru">
+          <span class="v num" id="scoreT1">0</span>
+          <span class="sidechip" id="chip1">Biru</span>
+        </div>
+        <div class="gamebox">
+          <div class="g" id="gameLbl">Game 1</div>
+          <div class="pips" id="pips"></div>
+          <div class="nmhint">Pilih tim atau tulis baru</div>
+        </div>
+        <div class="sc" id="sc2">
+          <input type="text" class="tname" id="name2" list="teamList" autocomplete="off" aria-label="Tim kedua" maxlength="28" placeholder="Pilih / tulis tim" title="Pilih tim terdaftar atau tulis nama baru">
+          <span class="v num" id="scoreT2">0</span>
+          <span class="sidechip" id="chip2">Merah</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card savebar" id="saveBar" hidden>
+      <span class="sdot" id="saveDot"></span>
+      <span class="stxt" id="saveInfo"></span>
+      <button class="pill sm" id="btnArchive">Simpan ke tim</button>
+    </section>
+
+    <section class="card sug" id="sugSect" hidden>
+      <div class="sughd"><h3 id="sugTitle">Saran</h3><span class="sugnote" id="sugNote"></span></div>
+      <div id="sugBody"></div>
+    </section>
+
+    <section class="card spine">
+      <div class="turn idle" id="turn"><div class="who">Belum mulai</div></div>
+      <div class="rail" id="rail"></div>
+      <p class="hint" id="hint">Pilih format seri dan sisi first pick, lalu tekan Mulai game.</p>
+      <div class="winq" id="winq" hidden>
+        <span class="lbl">Menang?</span>
+        <div class="wbtns">
+          <button class="b" data-side="blue" id="winB">Tim 1</button>
+          <button class="r" data-side="red" id="winR">Tim 2</button>
+        </div>
+      </div>
+      <div class="acts">
+        <button class="pill" id="btnUndo">Undo</button>
+        <button class="pill" id="btnResetGame">Ulang game ini</button>
+        <button class="pill" id="btnResetSeries">Reset seri</button>
+      </div>
+    </section>
+
+    <div class="board">
+      <section class="card team b">
+        <div class="hd">
+          <input type="text" class="hdname" id="hdB" list="teamList" autocomplete="off" maxlength="28" aria-label="Tim sisi biru" title="Pilih tim terdaftar atau tulis nama baru">
+          <span class="editcue">ganti nama</span>
+          <span class="fp">Biru · First pick</span><span class="cnt" id="cntB">0/5</span>
+        </div>
+        <div class="banrow"><span class="lbl">Ban</span><div class="bans" id="banB"></div></div>
+        <div class="picks" id="pickB"></div>
+      </section>
+
+      <section class="card team r">
+        <div class="hd">
+          <input type="text" class="hdname" id="hdR" list="teamList" autocomplete="off" maxlength="28" aria-label="Tim sisi merah" title="Pilih tim terdaftar atau tulis nama baru">
+          <span class="editcue">ganti nama</span>
+          <span class="fp">Merah</span><span class="cnt" id="cntR">0/5</span>
+        </div>
+        <div class="banrow"><span class="lbl">Ban</span><div class="bans" id="banR"></div></div>
+        <div class="picks" id="pickR"></div>
+      </section>
+    </div>
+
+    <section class="card compare">
+      <div class="cmp b" id="cmpB"></div>
+      <div class="cmp r" id="cmpR"></div>
+    </section>
+
+    <section class="card gbp" id="histSect" hidden>
+      <h3>Draft tiap game</h3>
+      <p class="note">Pick tiap tim otomatis terkunci GBP buat tim itu sampai seri selesai — kuncinya ikut tim, bukan sisi. Ban tidak ikut terkunci.</p>
+      <div class="gpv" id="gpv"></div>
+    </section>
+    </div><!-- /pane left -->
+
+    <div class="pane right">
+      <section class="card flex">
+        <div class="galbar">
+          <div class="search"><input type="search" id="q" placeholder="Cari hero…" autocomplete="off"></div>
+          <span class="galcount" id="galCount"></span>
+          <div class="dens" id="dens" title="Ukuran kotak hero">
+            <button type="button" data-v="s" aria-pressed="false">S</button>
+            <button type="button" data-v="m" aria-pressed="true">M</button>
+            <button type="button" data-v="l" aria-pressed="false">L</button>
+          </div>
+          <div class="pills" id="filters"></div>
+        </div>
+        <div class="legend" id="legend" hidden>
+          <i class="p">★ Prioritas</i>
+          <i class="c" id="legC">Counter</i>
+          <i class="k" id="legK">Combo</i>
+        </div>
+        <div class="grid" id="grid"></div>
+      </section>
+    </div>
+   </div><!-- /panes -->
+  </div>
+
+  <!-- ============ HERO ============ -->
+  <div class="view scroll" id="viewHero" hidden>
+    <section class="card">
+      <div class="hhead">
+        <div>
+          <h2>Daftar Hero</h2>
+          <p>Klik thumbnail buat upload gambar. Tombol ★ nandain hero prioritas — OP atau ban-rate tinggi. Semua perubahan langsung kesimpen.</p>
+        </div>
+        <span class="sp"></span>
+        <div class="acts2">
+          <span class="saved" id="savedHero">Tersimpan otomatis</span>
+          <button class="pill" id="btnExport" title="Bungkus semua data + gambar jadi satu file ZIP">Export semua</button>
+          <button class="pill" id="btnImport" title="Pulihkan dari file ZIP backup">Import backup</button>
+          <button class="pill" id="btnBulk">Upload massal</button>
+          <button class="pill" id="btnAdd">+ Hero baru</button>
+        </div>
+      </div>
+
+      <div class="meters">
+        <div class="meter">
+          <div class="top"><b>Gambar terpasang</b><span id="mImgTxt">0/0</span></div>
+          <div class="track2"><i id="mImgBar" style="width:0%"></i></div>
+        </div>
+        <div class="meter">
+          <div class="top"><b>Tipe damage terisi</b><span id="mDmgTxt">0/0</span></div>
+          <div class="track2"><i id="mDmgBar" style="width:0%"></i></div>
+        </div>
+      </div>
+      <p class="nag" id="prioNote" hidden></p>
+
+      <p class="nag" id="nagDmg" hidden></p>
+
+      <div class="hbar">
+        <div class="search"><input type="search" id="hq" placeholder="Cari hero…" autocomplete="off"></div>
+        <div class="pills" id="hFilters"></div>
+      </div>
+
+      <div class="hlist" id="hlist"></div>
+    </section>
+  </div>
+
+  <!-- ============ RELASI ============ -->
+  <div class="view" id="viewRel" hidden>
+   <div class="panes">
+    <div class="pane left">
+      <section class="card">
+        <div class="hhead">
+          <div>
+            <h2>Counter &amp; Combo</h2>
+            <p>Isi dari pengalaman lo sendiri. Pas draft jalan, sistem nyaranin hero berdasarkan data ini — jadi akurasinya seakurat yang lo isi.</p>
+          </div>
+          <span class="sp"></span>
+          <span class="saved" id="savedRel">Tersimpan otomatis</span>
+        </div>
+        <div class="subj" id="subj"></div>
+        <div class="relbox">
+          <div class="relhd">
+            <span class="lbl">Hero ini kuat lawan</span>
+            <button class="pill sm" id="armCounters">+ Tambah</button>
+          </div>
+          <div class="chips2" id="listCounters"></div>
+        </div>
+        <div class="relbox">
+          <div class="relhd">
+            <span class="lbl">Combo bagus sama</span>
+            <button class="pill sm" id="armCombo">+ Tambah</button>
+          </div>
+          <div class="chips2" id="listCombo"></div>
+          <p class="note sm">Combo otomatis dua arah — kalau A combo sama B, B juga combo sama A.</p>
+        </div>
+        <div class="relbox">
+          <div class="relhd"><span class="lbl">Dicounter sama</span></div>
+          <div class="chips2" id="listBy"></div>
+          <p class="note sm">Dihitung otomatis dari hero lain yang lo tandai kuat lawan hero ini.</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="pane right">
+      <section class="card flex">
+        <div class="galbar">
+          <div class="search"><input type="search" id="rq" placeholder="Cari hero…" autocomplete="off"></div>
+          <span class="galcount" id="relCount"></span>
+          <div class="pills" id="relFilters"></div>
+        </div>
+        <p class="armnote" id="armNote"></p>
+        <div class="grid" id="relGrid"></div>
+      </section>
+    </div>
+   </div>
+  </div>
+
+  <!-- ============ PAPAN ============ -->
+  <div class="view" id="viewBoard" hidden>
+   <div class="panes wide">
+    <div class="pane left">
+      <section class="card">
+        <div class="bsel">
+          <select id="boardSel" aria-label="Pilih papan"></select>
+          <button class="pill" id="boardNew">+ Papan baru</button>
+          <button class="pill" id="boardRename">Ganti nama</button>
+          <button class="pill" id="boardDel">Hapus</button>
+          <span class="sp" style="flex:1"></span>
+          <span class="saved" id="savedBoard">Tersimpan otomatis</span>
+        </div>
+        <div class="btools">
+          <div class="swatches" id="swatches"></div>
+          <div class="widths" id="widths">
+            <button type="button" data-v="3" aria-pressed="true"><i style="width:14px;height:3px"></i></button>
+            <button type="button" data-v="6" aria-pressed="false"><i style="width:14px;height:6px"></i></button>
+            <button type="button" data-v="11" aria-pressed="false"><i style="width:14px;height:10px"></i></button>
+          </div>
+          <button class="pill" id="toolErase">Hapus coretan</button>
+          <button class="pill" id="boardUndo">Undo</button>
+          <button class="pill" id="boardClear">Bersihin</button>
+          <span class="sp" style="flex:1"></span>
+          <button class="pill" id="boardBg">Ganti map</button>
+          <button class="pill" id="boardFull">Layar penuh</button>
+          <button class="pill" id="boardPng">Simpan PNG</button>
+        </div>
+        <div class="boardwrap" id="boardWrap">
+          <div class="boardbg" id="boardBgEl"></div>
+          <div class="bhint" id="boardHint" hidden>
+            <b>Belum ada map</b>
+            <span>Tekan <b>Ganti map</b> di atas buat upload screenshot map lo.</span>
+          </div>
+          <canvas class="boardcv pen" id="boardCv"></canvas>
+        </div>
+        <p class="boardnote">Tarik token buat mindahin. Klik kanan token buat angkat.</p>
+      </section>
+    </div>
+    <div class="pane right">
+      <section class="card flex">
+        <div class="galbar">
+          <div class="search"><input type="search" id="bq" placeholder="Cari hero…" autocomplete="off"></div>
+          <div class="tsides" id="tokSide">
+            <button type="button" class="b" data-v="b" aria-pressed="true">Biru</button>
+            <button type="button" class="r" data-v="r" aria-pressed="false">Merah</button>
+            <button type="button" class="n" data-v="n" aria-pressed="false">Netral</button>
+          </div>
+          <div class="pills" id="bFilters"></div>
+        </div>
+        <p class="armnote on">Klik hero buat naruh token di papan.</p>
+        <div class="grid" id="bGrid"></div>
+      </section>
+    </div>
+   </div>
+  </div>
+
+  <!-- ============ TIM ============ -->
+  <div class="view scroll" id="viewTeam" hidden>
+    <section class="card">
+      <div class="hhead">
+        <div>
+          <h2>Tim</h2>
+          <p>Simpan roster tim beserta logo dan pemainnya. Seri yang selesai otomatis masuk riwayat tim kalau timnya dipasang di tab Draft.</p>
+        </div>
+        <span class="sp"></span>
+        <div class="acts2">
+          <span class="saved" id="savedTeam">Tersimpan otomatis</span>
+          <button class="pill" id="teamNew">+ Tim baru</button>
+        </div>
+      </div>
+      <div class="tgrid" id="tgrid"></div>
+    </section>
+  </div>
+</div><!-- /wrap -->
+
+<datalist id="teamList"></datalist>
+
+<div class="modal" id="cropModal" hidden>
+  <div class="sheet">
+    <h3 id="cropTitle">Atur gambar</h3>
+    <p class="note">Geser gambarnya buat mindahin, pakai slider atau scroll buat zoom. Yang masuk kotak itu yang kesimpen.</p>
+    <div class="cropbox" id="cropBox">
+      <canvas id="cropCanvas"></canvas>
+      <div class="ring"></div>
+    </div>
+    <div class="zoomrow">
+      <span class="lbl">Zoom</span>
+      <input type="range" id="cropZoom" min="1" max="5" step="0.01" value="1" aria-label="Zoom gambar">
+    </div>
+    <div class="foot">
+      <button class="pill" id="cropCancel">Batal</button>
+      <button class="pill on" id="cropOk">Pakai gambar</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileOne" accept="image/*" hidden>
+<input type="file" id="fileMany" accept="image/*" multiple hidden>
+<input type="file" id="fileBg" accept="image/*" hidden>
+<input type="file" id="fileLogo" accept="image/*" hidden>
+<input type="file" id="fileZip" accept=".zip,application/zip" hidden>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/* ===== config ===== */
+/* ──────────────────────────────────────────────────────────────
+   HOK Draft Board — konfigurasi
+
+   Biarkan apa adanya kalau mau jalan tanpa database sama sekali.
+   Data disimpan di browser (IndexedDB) dan nggak hilang kalau
+   halaman di-refresh atau browser ditutup.
+
+   Kalau mau sinkron antar device (kantor / rumah / HP), isi dua
+   nilai di bawah. Caranya ada di README.md bagian "Nyalain sync".
+   ────────────────────────────────────────────────────────────── */
+window.HOK_CONFIG = {
+  supabase: {
+    url: "",        // contoh: "https://abcdefgh.supabase.co"
+    anonKey: "",    // kunci "anon public" dari Settings -> API
+    bucket: "hok"   // nama bucket storage, biarkan "hok"
+  }
+};
+
+/* ===== storage ===== */
+/* ──────────────────────────────────────────────────────────────
+   Storage layer for HOK Draft Board (standalone).
+
+   Two backends behind one interface shaped like the original
+   claude.ai db capability, so the app code barely changed:
+
+     store.doc(path).get() / .set(obj) / .delete()
+     store.collection(path).get()        -> array of docs
+     assets.upload(blob)                 -> { id }
+     imgSrc(key)                         -> usable <img> src
+
+   Backend A (default): IndexedDB in the browser. Zero setup.
+   Backend B: Supabase, switched on by filling in config.js.
+   ────────────────────────────────────────────────────────────── */
+"use strict";
+
+const IDB_NAME = "hokdraft";
+const IDB_VER = 1;
+const DOCS = "docs";
+const BLOBS = "blobs";
+
+let _idb = null;
+function idb() {
+  if (_idb) return _idb;
+  _idb = new Promise((res, rej) => {
+    const r = indexedDB.open(IDB_NAME, IDB_VER);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      if (!d.objectStoreNames.contains(DOCS)) d.createObjectStore(DOCS);
+      if (!d.objectStoreNames.contains(BLOBS)) d.createObjectStore(BLOBS);
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return _idb;
+}
+function tx(storeName, mode, fn) {
+  return idb().then(d => new Promise((res, rej) => {
+    const t = d.transaction(storeName, mode);
+    const s = t.objectStore(storeName);
+    let out;
+    try { out = fn(s); } catch (e) { rej(e); return; }
+    t.oncomplete = () => res(out && out.result !== undefined ? out.result : out);
+    t.onerror = () => rej(t.error);
+    t.onabort = () => rej(t.error);
+  }));
+}
+const idbGet = (store, k) => tx(store, "readonly", s => s.get(k));
+const idbSet = (store, k, v) => tx(store, "readwrite", s => s.put(v, k));
+const idbDel = (store, k) => tx(store, "readwrite", s => s.delete(k));
+const idbKeys = store => tx(store, "readonly", s => s.getAllKeys());
+const idbAll = store => tx(store, "readonly", s => s.getAll());
+
+/* ---------- object-URL cache so render paths stay synchronous ---------- */
+const urlCache = new Map();
+function imgSrc(key) {
+  if (!key) return null;
+  if (urlCache.has(key)) return urlCache.get(key);
+  /* not a stored blob: treat it as a path to a file shipped with the site */
+  return key;
+}
+async function primeImages() {
+  try {
+    const keys = await idbKeys(BLOBS);
+    const vals = await idbAll(BLOBS);
+    keys.forEach((k, i) => {
+      const b = vals[i];
+      if (b instanceof Blob) {
+        const old = urlCache.get(k);
+        if (old) URL.revokeObjectURL(old);
+        urlCache.set(k, URL.createObjectURL(b));
+      }
+    });
+  } catch (e) { console.warn("gagal menyiapkan gambar", e); }
+}
+async function putImage(key, blob) {
+  await idbSet(BLOBS, key, blob);
+  const old = urlCache.get(key);
+  if (old) URL.revokeObjectURL(old);
+  urlCache.set(key, URL.createObjectURL(blob));
+}
+async function getImageBlob(key) {
+  if (!key) return null;
+  const b = await idbGet(BLOBS, key);
+  if (b instanceof Blob) return b;
+  /* fall back to a file shipped alongside the site */
+  try { const r = await fetch(key); if (r.ok) return await r.blob(); } catch (e) {}
+  return null;
+}
+
+/* ---------- Backend A: IndexedDB ---------- */
+const localStore = {
+  kind: "lokal",
+  doc(path) {
+    return {
+      get: () => idbGet(DOCS, path),
+      set: v => idbSet(DOCS, path, JSON.parse(JSON.stringify(v))),
+      delete: () => idbDel(DOCS, path)
+    };
+  },
+  collection(path) {
+    const pre = path.endsWith("/") ? path : path + "/";
+    return {
+      get: async () => {
+        const keys = await idbKeys(DOCS);
+        const vals = await idbAll(DOCS);
+        const out = [];
+        keys.forEach((k, i) => { if (String(k).startsWith(pre)) out.push(vals[i]); });
+        return out;
+      }
+    };
+  }
+};
+const localAssets = {
+  upload: async blob => {
+    const id = "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    await putImage(id, blob);
+    return { id };
+  }
+};
+
+/* ---------- Backend B: Supabase ---------- */
+/* Table expected (see supabase.sql):
+     create table docs (path text primary key, data jsonb, updated_at timestamptz);
+   Storage bucket expected: "hok" (public read). */
+function supabaseStore(cfg) {
+  const base = cfg.url.replace(/\/+$/, "");
+  const H = {
+    apikey: cfg.anonKey,
+    Authorization: "Bearer " + cfg.anonKey,
+    "Content-Type": "application/json"
+  };
+  const rest = base + "/rest/v1/docs";
+  return {
+    kind: "supabase",
+    doc(path) {
+      const q = rest + "?path=eq." + encodeURIComponent(path);
+      return {
+        get: async () => {
+          const r = await fetch(q + "&select=data", { headers: H });
+          if (!r.ok) throw new Error("get " + r.status);
+          const rows = await r.json();
+          return rows.length ? rows[0].data : undefined;
+        },
+        set: async v => {
+          const r = await fetch(rest, {
+            method: "POST",
+            headers: Object.assign({}, H, { Prefer: "resolution=merge-duplicates" }),
+            body: JSON.stringify({ path, data: v, updated_at: new Date().toISOString() })
+          });
+          if (!r.ok) throw new Error("set " + r.status);
+        },
+        delete: async () => {
+          const r = await fetch(q, { method: "DELETE", headers: H });
+          if (!r.ok) throw new Error("del " + r.status);
+        }
+      };
+    },
+    collection(path) {
+      const pre = path.endsWith("/") ? path : path + "/";
+      return {
+        get: async () => {
+          const r = await fetch(rest + "?path=like." + encodeURIComponent(pre + "*") + "&select=data", { headers: H });
+          if (!r.ok) throw new Error("list " + r.status);
+          return (await r.json()).map(x => x.data);
+        }
+      };
+    }
+  };
+}
+function supabaseAssets(cfg) {
+  const base = cfg.url.replace(/\/+$/, "");
+  const bucket = cfg.bucket || "hok";
+  return {
+    upload: async blob => {
+      const ext = (blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
+      const id = "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + "." + ext;
+      const r = await fetch(base + "/storage/v1/object/" + bucket + "/" + id, {
+        method: "POST",
+        headers: { apikey: cfg.anonKey, Authorization: "Bearer " + cfg.anonKey, "Content-Type": blob.type || "image/jpeg" },
+        body: blob
+      });
+      if (!r.ok) throw new Error("upload " + r.status);
+      const url = base + "/storage/v1/object/public/" + bucket + "/" + id;
+      urlCache.set(url, url);
+      return { id: url };          /* the public URL is the key — imgSrc passes it through */
+    }
+  };
+}
+
+/* ---------- pick a backend ---------- */
+let store = localStore;
+let assets = localAssets;
+let storeKind = "lokal";
+let storeNote = "Data kesimpen di browser ini.";
+
+function initStore() {
+  const cfg = (typeof HOK_CONFIG !== "undefined") ? HOK_CONFIG : null;
+  if (cfg && cfg.supabase && cfg.supabase.url && cfg.supabase.anonKey
+      && !/YOUR_|xxxx/i.test(cfg.supabase.url + cfg.supabase.anonKey)) {
+    try {
+      store = supabaseStore(cfg.supabase);
+      assets = supabaseAssets(cfg.supabase);
+      storeKind = "supabase";
+      storeNote = "Tersinkron lewat Supabase.";
+    } catch (e) {
+      console.warn("Supabase gagal dipakai, balik ke penyimpanan lokal", e);
+    }
+  }
+  return storeKind;
+}
+
+/* ---------- plain-browser file save (no artifact sandbox here) ---------- */
+async function saveFile(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+/* ===== app ===== */
+"use strict";
+
+"use strict";
+
+/* roster: lanes from HoKStats, damage type from published class listings.
+   dmg null = belum terverifikasi; user isi sendiri di tab Hero. */
+const ROSTER = [
+["Agudo",["jungle"],"physical"],["Alessio",["farm"],"physical"],["Allain",["clash"],"physical"],
+["Angela",["mid"],"magic"],["Annette",["roam"],null],["Ao'yin",["farm"],null],
+["Arke",["jungle"],null],["Arli",["farm"],"physical"],["Arthur",["clash","jungle"],"physical"],
+["Athena",["jungle"],"physical"],["Ata",["clash","jungle"],null],["Augran",["jungle","clash"],"physical"],
+["Bai Qi",["clash"],null],["Biron",["clash"],"physical"],["Butterfly",["jungle"],"physical"],
+["Cai Yan",["roam"],null],["Chano",["farm","jungle"],null],["Charlotte",["clash","jungle"],"physical"],
+["Chicha",["clash","jungle","farm"],null],["Cirrus",["jungle"],"physical"],["Consort Yu",["farm"],"physical"],
+["Da Qiao",["roam","mid"],"magic"],["Daji",["mid"],"magic"],["Devara",["clash"],null],
+["Dharma",["clash","jungle"],"physical"],["Di Renjie",["farm"],"physical"],["Dian Wei",["jungle"],"physical"],
+["Diaochan",["mid","clash"],"magic"],["Dolia",["roam"],null],["Donghuang",["roam","clash"],null],
+["Dr Bian",["mid"],"magic"],["Dun",["clash","roam"],"physical"],["Dunshan",[],null],
+["Dyadia",["roam"],"magic"],["Erin",["farm"],"physical"],["Fang",["farm","jungle"],"physical"],
+["Fatih",["clash","jungle"],null],["Feyd",["jungle"],null],["Florentino",["clash"],null],
+["Flowborn Jungle",["jungle"],null],["Flowborn Mage",["mid"],"magic"],["Flowborn Marksman",["farm"],"physical"],
+["Flowborn Support",["roam"],null],["Flowborn Tank",["clash"],null],["Fuzi",["clash"],"physical"],
+["Gan & Mo",["mid"],"magic"],["Gao",["mid"],"magic"],["Gao Changgong",["jungle"],"physical"],
+["Garo",["farm"],"physical"],["Garuda",["mid"],null],["Guan Yu",["clash"],"physical"],
+["Guiguzi",["roam"],null],["Han Xin",["jungle"],"physical"],["Haya",["mid"],null],
+["Heino",["mid","clash"],"magic"],["Hou Yi",["farm"],"physical"],["Huang Zhong",["farm"],"physical"],
+["Jing",["jungle"],"physical"],["Kaizer",["clash","jungle"],"physical"],["Kongming",["mid","jungle"],"magic"],
+["Kui",["roam"],"magic"],["Lady Sun",["farm"],"physical"],["Lady Zhen",["mid"],"magic"],
+["Lam",["jungle"],"physical"],["Lapu-lapu",["roam"],null],["Li Bai",["jungle"],"physical"],
+["Li Xin",["clash"],"physical"],["Lian Po",["clash","roam"],null],["Liang",["mid"],"magic"],
+["Liu Bang",["clash","roam"],"magic"],["Liu Bei",["jungle"],"physical"],["Liu Shan",["roam"],null],
+["Lorion",["mid"],null],["Lu Bu",["clash"],"physical"],["Luara",["farm"],"physical"],
+["Luban No.7",["farm"],"physical"],["Luna",["jungle"],"magic"],["Mai Shiranui",["mid"],"magic"],
+["Marco Polo",["farm"],"physical"],["Mayene",["clash","jungle"],"physical"],["Meng Ya",["farm"],"physical"],
+["Menki",["jungle","clash"],"magic"],["Mi Yue",["clash","jungle"],"magic"],["Milady",["mid"],"magic"],
+["Ming",["roam"],null],["Mozi",["mid","roam"],null],["Mulan",["clash"],"physical"],
+["Musashi",["jungle","clash"],"physical"],["Nakoruru",["jungle"],"physical"],["Nezha",["clash"],"physical"],
+["Nuwa",["mid"],"magic"],["Pei",["jungle"],"physical"],["Sakeer",["roam"],null],
+["Shangguan",["mid"],"magic"],["Shi",["mid"],"magic"],["Shouyue",["farm"],"physical"],
+["Sima Yi",["jungle","mid"],"magic"],["Sun Bin",["roam"],"magic"],["Sun Ce",["clash","jungle"],"physical"],
+["Ukyo Tachibana",["jungle","clash"],"physical"],["Umbrosa",["clash","jungle"],null],["Wang Wei",["mid"],null],
+["Wang Zhaojun",["mid"],null],["Wukong",["jungle"],"physical"],["Wuyan",["clash","jungle"],"physical"],
+["Xiang Yu",["roam","clash"],null],["Xiao Qiao",["mid"],"magic"],["Xuan Ce",["jungle"],null],
+["Yang Jian",["clash","jungle"],"physical"],["Yango",["clash","jungle"],null],["Yao",["jungle","clash"],"physical"],
+["Yaria",["roam"],null],["Ying",["jungle"],"physical"],["Yixing",["mid"],"magic"],
+["Yuhuan",["mid","roam"],"magic"],["Zhang Fei",["roam"],null],["Zhou Yu",["mid"],"magic"],
+["Zhuangzi",["roam","clash"],null],["Zilong",["jungle"],"physical"],["Ziya",["mid","roam"],"magic"]
+];
+
+const LANES=["clash","jungle","mid","farm","roam"];
+const LN={clash:"Clash",jungle:"Jungle",mid:"Mid",farm:"Farm",roam:"Roam"};
+const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+const norm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,"");
+
+/* A = first-pick side, B = second */
+const SEQ=[
+ {p:"ban",s:"A"},{p:"ban",s:"B"},{p:"ban",s:"A"},{p:"ban",s:"B"},
+ {p:"pick",s:"A"},{p:"pick",s:"B"},{p:"pick",s:"B"},{p:"pick",s:"A"},{p:"pick",s:"A"},{p:"pick",s:"B"},
+ {p:"ban",s:"B"},{p:"ban",s:"A"},{p:"ban",s:"B"},{p:"ban",s:"A"},
+ {p:"pick",s:"B"},{p:"pick",s:"A"},{p:"pick",s:"A"},{p:"pick",s:"B"}
+];
+const PHASES=[{n:"Ban 1",a:0,b:4},{n:"Pick 1",a:4,b:10},{n:"Ban 2",a:10,b:14},{n:"Pick 2",a:14,b:18}];
+const FORMATS={bo1:1,bo3:2,bo5:3,bo7:4};
+
+let heroes=[], byId=new Map(), S=null;
+let filter="all", query="", lastPlaced=-1;
+let hQuery="", hFilter="all";
+let saveTimer=null, gridBuilt=false;   /* store + assets come from store.js */
+let dirty=false, uploadTarget=null, view="draft";
+
+/* the db capability hands back frozen objects — deep-copy before using them as mutable state */
+function mutable(o){
+  if(o==null||typeof o!=="object") return o;
+  try{ return structuredClone(o); }catch(e){}
+  try{ return JSON.parse(JSON.stringify(o)); }catch(e){ return o; }
+}
+/* Teams persist across the series; sides change per game.
+   Blue side always drafts first, so "who is on blue" IS the first-pick question. */
+function freshDraft(blueTeam){ return {blueTeam:blueTeam||"t1",started:false,step:0,slots:SEQ.map(()=>null),done:false,target:null}; }
+function freshSeries(f,teams,mode,autoSwap){
+  return {format:f||"bo5",game:1,mode:mode||"bp",autoSwap:autoSwap!==false,
+    sid:"s"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),savedAt:null,
+    teams:{t1:(teams&&teams.t1)||"Tim 1",t2:(teams&&teams.t2)||"Tim 2"},
+    score:{t1:0,t2:0},gbp:{t1:[],t2:[]},results:[],draft:freshDraft("t1"),over:false};
+}
+/* archive mode: record old scrims from memory — picks only, no bans, no draft order */
+const archive=()=>S.mode==="arsip";
+const pickSlots=()=>slotsFor("blue","pick").concat(slotsFor("red","pick"));
+function nextEmpty(from){
+  const all=pickSlots();
+  const start=all.indexOf(from);
+  for(let k=0;k<all.length;k++){
+    const i=all[(start+1+k+all.length)%all.length];
+    if(!S.draft.slots[i]) return i;
+  }
+  return null;
+}
+const pickCount=()=>pickSlots().filter(i=>S.draft.slots[i]).length;
+const sideOf=tag=>tag==="A"?"blue":"red";
+const otherTeam=t=>t==="t1"?"t2":"t1";
+const teamOnSide=s=>s==="blue"?S.draft.blueTeam:otherTeam(S.draft.blueTeam);
+const sideOfTeam=t=>t===S.draft.blueTeam?"blue":"red";
+const tName=t=>((S.teams&&S.teams[t])||"").trim()||(t==="t1"?"Tim 1":"Tim 2");
+const target=()=>FORMATS[S.format]||3;
+const $=id=>document.getElementById(id);
+
+/* older saves keyed score and GBP by side, which mis-assigns both once teams swap */
+function migrate(s){
+  if(!s||typeof s!=="object"||!s.score) return null;
+  if("blue" in s.score || !s.teams) return null;
+  return s;
+}
+
+function hue(name){ let h=0; for(let i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))%360; return h; }
+function tintStyle(name){ const h=hue(name);
+  return "background:linear-gradient(145deg,hsl("+h+" 38% 56%),hsl("+((h+40)%360)+" 42% 40%))"; }
+function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUpperCase(); }
+
+/* ---- persistence ---- */
+const LS="hokdraft.v1";
+function heroDoc(h){ return {name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
+  counters:h.counters||[],combo:h.combo||[],custom:!!h.custom}; }
+function overridesOut(){ const o={}; heroes.forEach(h=>{ if(h.custom||h.edited) o[h.id]=heroDoc(h); }); return o; }
+function lsSave(){ try{ localStorage.setItem(LS,JSON.stringify({S,ov:overridesOut(),boards,teams})); }catch(e){} }
+function lsLoad(){ try{ const r=localStorage.getItem(LS); return r?JSON.parse(r):null; }catch(e){ return null; } }
+function queueSave(){ dirty=true; lsSave(); clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{ store.doc("state/series").set(S).catch(()=>{}); },400); }
+function pad2(n){ return (n<10?"0":"")+n; }
+function markSaved(ok){
+  const t=new Date();
+  const txt=ok===false ? "Kesimpen di browser ini aja"
+                       : "✓ Tersimpan "+pad2(t.getHours())+":"+pad2(t.getMinutes());
+  ["savedRel","savedHero"].forEach(id=>{
+    const el=$(id); if(!el) return;
+    el.textContent=txt;
+    el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+  });
+}
+function saveHero(h){ dirty=true; lsSave();
+  store.doc("heroes/"+h.id).set(heroDoc(h)).then(()=>markSaved(true)).catch(()=>markSaved(false)); }
+
+function buildRoster(ov){
+  heroes=ROSTER.map(([name,lanes,dmg])=>({id:slug(name),name,lanes:lanes.slice(),dmg,img:null,prio:false,counters:[],combo:[]}));
+  const seen=new Set(heroes.map(h=>h.id));
+  Object.entries(ov||{}).forEach(([id,o])=>{
+    if(seen.has(id)){ const h=heroes.find(x=>x.id===id);
+      Object.assign(h,{name:o.name??h.name,lanes:(o.lanes||h.lanes||[]).slice(),dmg:o.dmg===undefined?h.dmg:o.dmg,
+        img:o.img||null,prio:!!o.prio,counters:(o.counters||[]).slice(),combo:(o.combo||[]).slice(),edited:true});
+    }else{ heroes.push({id,name:o.name||id,lanes:(o.lanes||[]).slice(),dmg:o.dmg??null,img:o.img||null,prio:!!o.prio,
+        counters:(o.counters||[]).slice(),combo:(o.combo||[]).slice(),custom:true}); seen.add(id); }
+  });
+  heroes.sort((a,b)=>a.name.localeCompare(b.name));
+  byId=new Map(heroes.map(h=>[h.id,h]));
+  /* drop references to heroes that no longer exist, and keep combos mutual */
+  heroes.forEach(h=>{
+    h.counters=(h.counters||[]).filter(x=>byId.has(x)&&x!==h.id);
+    h.combo=(h.combo||[]).filter(x=>byId.has(x)&&x!==h.id);
+  });
+  heroes.forEach(h=>h.combo.forEach(c=>{ const o=byId.get(c); if(o&&!o.combo.includes(h.id)) o.combo.push(h.id); }));
+}
+
+const usedSet=()=>new Set(S.draft.slots.filter(Boolean));
+function statusFor(id){
+  const d=S.draft;
+  if(usedSet().has(id)) return "used";
+  if(!d.started||d.done) return "idle";
+  if(archive()){
+    if(d.target==null) return "idle";
+    /* flag a GBP clash but still allow it — archived memory may not be perfect */
+    const t=teamOnSide(sideOf(SEQ[d.target].s));
+    return S.gbp[t].includes(id) ? "wasteban" : "free";
+  }
+  const step=SEQ[d.step], side=sideOf(step.s), me=teamOnSide(side);
+  if(step.p==="pick" && S.gbp[me].includes(id)) return "locked";
+  /* banning what the opponent is already GBP-locked out of denies them nothing
+     and costs you a ban slot — flag it, but still allow it so real games record faithfully */
+  if(step.p==="ban" && S.gbp[otherTeam(me)].includes(id)) return "wasteban";
+  return "free";
+}
+function slotsFor(side,phase){ const o=[]; SEQ.forEach((st,i)=>{ if(st.p===phase && sideOf(st.s)===side) o.push(i); }); return o; }
+
+function portrait(h){
+  const d=document.createElement("div"); d.className="ph";
+  if(!h) return d;
+  if(h.img){ const i=document.createElement("img"); i.src=imgSrc(h.img); i.alt=h.name; i.loading="lazy"; d.appendChild(i); }
+  else{ d.setAttribute("style",tintStyle(h.name));
+        const m=document.createElement("span"); m.className="mono"; m.textContent=monogram(h.name); d.appendChild(m); }
+  return d;
+}
+
+/* ---- board ---- */
+function renderBoard(){
+  const d=S.draft;
+  if(document.activeElement!==$("hdB")) $("hdB").value=tName(teamOnSide("blue"));
+  if(document.activeElement!==$("hdR")) $("hdR").value=tName(teamOnSide("red"));
+  ["blue","red"].forEach(team=>{
+    const bEl=$(team==="blue"?"banB":"banR"), pEl=$(team==="blue"?"pickB":"pickR");
+    bEl.textContent=""; pEl.textContent="";
+    bEl.closest(".banrow").hidden=archive();
+    slotsFor(team,"ban").forEach(i=>{
+      const h=d.slots[i]?byId.get(d.slots[i]):null;
+      const el=document.createElement("div");
+      el.className="ban"+(h?" fill":"")+(d.started&&!d.done&&d.step===i?" cur":"");
+      if(h){ el.appendChild(portrait(h)); el.title="Ban: "+h.name; }
+      bEl.appendChild(el);
+    });
+    let filled=0;
+    slotsFor(team,"pick").forEach((i,n)=>{
+      const h=d.slots[i]?byId.get(d.slots[i]):null; if(h) filled++;
+      const liveSlot = archive() ? (d.started&&d.target===i) : (d.started&&!d.done&&d.step===i);
+      const el=document.createElement(archive()?"button":"div");
+      if(archive()){ el.type="button"; el.dataset.slot=i;
+        el.title=h?"Klik buat kosongin "+h.name:"Klik buat isi slot ini"; }
+      el.className="slot"+(h?"":" vacant")+(liveSlot?" live":"")+(i===lastPlaced?" just":"")+(archive()?" tap":"");
+      const box=document.createElement("div"); box.className="box";
+      if(h){
+        box.appendChild(portrait(h));
+        if(h.dmg){ const t=document.createElement("span"); t.className="dt"; t.textContent=h.dmg==="magic"?"MAG":"FIS"; box.appendChild(t); }
+      }else{
+        const ph=document.createElement("div"); ph.className="ph";
+        const ix=document.createElement("span"); ix.className="idx"; ix.textContent=n+1; ph.appendChild(ix); box.appendChild(ph);
+      }
+      el.appendChild(box);
+      const nm=document.createElement("span"); nm.className="nm";
+      nm.textContent=h?h.name:"Pick "+(n+1);
+      if(h) nm.title=h.name+(h.lanes.length?" · "+h.lanes.map(l=>LN[l]).join(", "):"");
+      el.appendChild(nm);
+      pEl.appendChild(el);
+    });
+    $(team==="blue"?"cntB":"cntR").textContent=filled+"/5";
+    renderComp(team);
+  });
+  lastPlaced=-1;
+}
+
+function renderComp(team){
+  const el=$(team==="blue"?"cmpB":"cmpR"); el.textContent="";
+  const h3=document.createElement("h3");
+  h3.textContent=tName(teamOnSide(team))+" · "+(team==="blue"?"Biru":"Merah");
+  el.appendChild(h3);
+  const picks=slotsFor(team,"pick").map(i=>S.draft.slots[i]).filter(Boolean).map(id=>byId.get(id)).filter(Boolean);
+  const cov=new Set(); picks.forEach(h=>h.lanes.forEach(l=>cov.add(l)));
+
+  const lanes=document.createElement("div"); lanes.className="lanes";
+  LANES.forEach(l=>{ const s=document.createElement("span"); s.className="ln"+(cov.has(l)?" on":""); s.textContent=LN[l]; lanes.appendChild(s); });
+  el.appendChild(lanes);
+
+  const p=picks.filter(h=>h.dmg==="physical").length, m=picks.filter(h=>h.dmg==="magic").length, u=picks.length-p-m;
+  const bar=document.createElement("div"); bar.className="dmg";
+  const tot=Math.max(picks.length,1);
+  [["p",p],["m",m],["u",u]].forEach(([c,v])=>{ const i=document.createElement("i"); i.className=c; i.style.width=(v/tot*100)+"%"; bar.appendChild(i); });
+  el.appendChild(bar);
+
+  const key=document.createElement("div"); key.className="dmgkey";
+  const mk=(t,v)=>{ const s=document.createElement("span"); s.append(t+" "); const b=document.createElement("b"); b.className="num"; b.textContent=v; s.appendChild(b); key.appendChild(s); };
+  mk("Fisik",p); mk("Magis",m); if(u) mk("Belum diisi",u);
+  el.appendChild(key);
+
+  const flags=document.createElement("div"); flags.className="flags";
+  const add=t=>{ const f=document.createElement("div"); f.className="flag"; f.textContent=t; flags.appendChild(f); };
+  if(picks.length===5){
+    const miss=LANES.filter(l=>!cov.has(l));
+    if(miss.length) add("Belum ada "+miss.map(l=>LN[l]).join(", "));
+    if(u===0){
+      if(m===0) add("Damage fisik semua — lawan cukup beli armor");
+      else if(p===0) add("Damage magis semua — lawan cukup beli magic resist");
+    }else add(u+" hero belum diisi tipe damage-nya (isi di tab Hero)");
+  }
+  if(flags.children.length) el.appendChild(flags);
+}
+
+/* ---- spine ---- */
+function renderSpine(){
+  const d=S.draft, t=$("turn"), rail=$("rail");
+  rail.textContent="";
+  PHASES.forEach(ph=>{
+    const box=document.createElement("div"); box.className="phase";
+    const pn=document.createElement("div"); pn.className="pn";
+    box.style.flex=(ph.b-ph.a)+" 1 0";
+    const b=document.createElement("b"); b.textContent=ph.n;
+    const i=document.createElement("i");
+    i.textContent=d.slots.slice(ph.a,ph.b).filter(Boolean).length+"/"+(ph.b-ph.a);
+    pn.appendChild(b); pn.appendChild(i); box.appendChild(pn);
+    const ticks=document.createElement("div"); ticks.className="ticks";
+    for(let k=ph.a;k<ph.b;k++){
+      const e=document.createElement("div"); let c="tk";
+      if(d.slots[k]) c+=" "+(sideOf(SEQ[k].s)==="blue"?"b":"r");
+      if(d.started&&!d.done&&d.step===k) c+=" now";
+      e.className=c; ticks.appendChild(e);
+    }
+    box.appendChild(ticks); rail.appendChild(box);
+  });
+
+  t.textContent="";
+  const who=document.createElement("div"); who.className="who";
+  const act=document.createElement("div"); act.className="act";
+  const stepN=document.createElement("div"); stepN.className="step";
+  if(S.over){
+    const w=S.score.t1>S.score.t2?"t1":"t2";
+    t.className="turn "+(sideOfTeam(w)==="blue"?"b":"r");
+    who.textContent=tName(w)+" menang";
+    act.textContent="Seri selesai "+S.score[w]+"–"+S.score[otherTeam(w)];
+    $("hint").textContent="Tekan Reset seri buat mulai dari nol. GBP bakal dikosongin, nama tim tetap.";
+  }else if(!d.started){
+    t.className="turn idle"; who.textContent="Belum mulai";
+    $("hint").textContent=archive()
+      ? "Mode arsip: isi pick dua tim tanpa ban dan tanpa urutan. Tekan Mulai game."
+      : tName(teamOnSide("blue"))+" di sisi biru, jadi mereka yang first pick. Tekan Tukar sisi kalau kebalik.";
+  }else if(archive()){
+    const n=pickCount();
+    t.className="turn idle"; who.textContent="Mode arsip";
+    act.textContent=n+" dari 10 pick";
+    $("hint").textContent = d.target==null
+      ? "Semua slot keisi. Tentukan pemenangnya di bawah."
+      : "Klik slot pick buat milih, terus klik heronya. Klik slot yang udah keisi buat kosongin.";
+  }else if(d.done){
+    t.className="turn idle"; who.textContent="Draft selesai";
+    act.textContent="Tentukan pemenang";
+    $("hint").textContent="Pilih pemenang game ini. 5 pick tiap tim langsung kekunci GBP, dan sisi otomatis tukar buat game berikutnya.";
+  }else{
+    const st=SEQ[d.step], side=sideOf(st.s);
+    t.className="turn "+(side==="blue"?"b":"r");
+    who.textContent=tName(teamOnSide(side));
+    const n=d.slots.slice(0,d.step).filter((x,i)=>SEQ[i].p===st.p&&sideOf(SEQ[i].s)===side).length+1;
+    act.textContent=(side==="blue"?"Biru":"Merah")+" · "+(st.p==="ban"?"Ban":"Pick")+" ke-"+n;
+    stepN.textContent=(d.step+1)+"/18";
+    $("hint").textContent="Klik hero di panel kanan buat ngisi slot ini.";
+  }
+  t.appendChild(who);
+  if(act.textContent) t.appendChild(act);
+  if(stepN.textContent) t.appendChild(stepN);
+  $("winq").hidden = archive() ? !(d.started&&pickCount()>0&&!S.over) : !(d.done&&!S.over);
+  $("btnUndo").disabled = !d.started || (archive()?pickCount()===0:d.step===0);
+  $("winB").textContent=tName(teamOnSide("blue"));
+  $("winR").textContent=tName(teamOnSide("red"));
+}
+
+function renderMatch(){
+  $("scoreT1").textContent=S.score.t1; $("scoreT2").textContent=S.score.t2;
+  if(document.activeElement!==$("name1")) $("name1").value=S.teams.t1;
+  if(document.activeElement!==$("name2")) $("name2").value=S.teams.t2;
+
+  ["t1","t2"].forEach((t,i)=>{
+    const side=sideOfTeam(t);
+    $("sc"+(i+1)).className="sc "+(side==="blue"?"onblue":"onred");
+    const chip=$("chip"+(i+1));
+    chip.className="sidechip "+(side==="blue"?"b":"r");
+    chip.textContent=side==="blue"?"Biru · First pick":"Merah";
+  });
+
+  $("sideWho").innerHTML="";
+  $("sideWho").append(document.createTextNode("Biru: "));
+  const strong=document.createElement("b"); strong.textContent=tName(S.draft.blueTeam);
+  $("sideWho").appendChild(strong);
+  $("btnSwap").hidden=S.over;
+  $("btnAuto").hidden=S.over;
+  $("btnAuto").setAttribute("aria-pressed",String(S.autoSwap!==false));
+  $("btnAuto").textContent=S.autoSwap!==false?"Auto tukar":"Auto tukar mati";
+
+  $("gameLbl").textContent="Game "+S.game;
+  const pips=$("pips"); pips.textContent="";
+  const n=target()*2-1;
+  for(let i=0;i<n;i++){
+    const p=document.createElement("span"); p.className="pip";
+    const r=S.results[i];
+    if(r){ p.classList.add("won"); p.textContent=r.winner==="t1"?"1":"2"; p.title="Game "+(i+1)+": "+tName(r.winner)+" menang"; }
+    pips.appendChild(p);
+  }
+  [...$("segFormat").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===S.format)));
+  [...$("segMode").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===(S.mode||"bp"))));
+  $("btnStart").textContent=(S.draft.started&&!S.draft.done)?"Game "+S.game+" jalan":"Mulai game "+S.game;
+  $("btnStart").classList.toggle("muted",S.draft.started||S.over);
+
+  $("histSect").hidden=!S.results.length;
+  if(S.results.length) renderGames();
+  renderSaveBar();
+}
+
+function renderSaveBar(){
+  const bar=$("saveBar"), n=S.results.length;
+  bar.hidden=!n;
+  if(!n) return;
+  const linked=["t1","t2"].filter(k=>S.link&&S.link[k]&&teams.find(x=>x.id===S.link[k]));
+  const names=linked.map(k=>tName(k));
+  const saved=!!S.savedAt;
+  bar.classList.toggle("done",saved);
+  const txt=$("saveInfo"); txt.textContent="";
+  const mk=(s,bold)=>{ const e=document.createElement(bold?"b":"span"); e.textContent=s; txt.appendChild(e); };
+  if(!linked.length){
+    mk(n+" game kecatat di seri ini, tapi belum ada tim yang kepasang. ");
+    mk("Isi nama tim di atas",1); mk(" biar bisa disimpen.");
+  }else if(saved){
+    const d=new Date(S.savedAt);
+    mk("Tersimpan "+pad2(d.getHours())+":"+pad2(d.getMinutes())+" ke ",0);
+    mk(names.join(" & "),1);
+    mk(" — "+n+" game lengkap sama pick-nya. Lihat di tab Tim.");
+  }else{
+    mk(n+" game kecatat. ",0);
+    mk("Belum kesimpen ke tim",1);
+    mk(" — otomatis pas seri selesai, atau tekan tombol ini sekarang.");
+  }
+  $("btnArchive").textContent=saved?"Simpan ulang":"Simpan ke tim";
+  $("btnArchive").hidden=!linked.length;
+}
+
+function thumb(id,ban){
+  const h=byId.get(id)||null;
+  const d=document.createElement("div"); d.className="gth"+(ban?" ban":"");
+  d.appendChild(portrait(h));
+  if(h) d.title=(ban?"Ban: ":"")+h.name;
+  return d;
+}
+function strip(ids,label,ban,legacy){
+  const wrap=document.createElement("div"); wrap.className="gset";
+  const k=document.createElement("span"); k.className="k"; k.textContent=label; wrap.appendChild(k);
+  if(legacy){ const e=document.createElement("span"); e.className="gnone"; e.textContent="tidak tercatat";
+    e.title="Game ini dimainkan sebelum ban mulai disimpan"; wrap.appendChild(e); return wrap; }
+  const row=document.createElement("div"); row.className="gthumbs";
+  (ids||[]).forEach(id=>{
+    if(ban){ row.appendChild(thumb(id,true)); return; }
+    const h=byId.get(id)||{name:id};
+    const col=document.createElement("div"); col.className="gpick";
+    col.appendChild(thumb(id,false));
+    const n=document.createElement("span"); n.className="pn2"; n.textContent=h.name; n.title=h.name;
+    col.appendChild(n); row.appendChild(col);
+  });
+  if(!(ids||[]).length){ const e=document.createElement("span"); e.className="gnone"; e.textContent="kosong"; row.appendChild(e); }
+  wrap.appendChild(row); return wrap;
+}
+function renderGames(){
+  const box=$("gpv"); box.textContent="";
+  S.results.forEach(r=>{
+    const noBans = r.blueBans===undefined && r.redBans===undefined;
+    const arsip = r.mode==="arsip";
+    const card=document.createElement("div"); card.className="gcard";
+    const head=document.createElement("div"); head.className="gh";
+    const b=document.createElement("b"); b.textContent="Game "+r.game+(arsip?" · arsip":"");
+    const w=document.createElement("span"); w.className="w";
+    w.textContent=tName(r.winner)+" menang · sisi "+(r.winner===r.blueTeam?"biru":"merah");
+    head.append(b,w); card.appendChild(head);
+
+    const teams=document.createElement("div"); teams.className="gteams";
+    const redTeam=r.blueTeam==="t1"?"t2":"t1";
+    [[r.blueTeam,"Biru",r.blueBans,r.blue],[redTeam,"Merah",r.redBans,r.red]].forEach(([t,sideLbl,bans,picks])=>{
+      const col=document.createElement("div"); col.className="gteam";
+      const who=document.createElement("div"); who.className="gt";
+      const tn=document.createElement("span"); tn.className="tn"; tn.textContent=tName(t); tn.title=tName(t);
+      const sc=document.createElement("span");
+      sc.className="sidechip "+(sideLbl==="Biru"?"b":"r"); sc.textContent=sideLbl;
+      who.append(tn,sc); col.appendChild(who);
+      const sets=document.createElement("div"); sets.className="gsets";
+      if(!arsip) sets.appendChild(strip(bans,"Ban",true,noBans));
+      sets.appendChild(strip(picks,"Pick",false,false));
+      col.appendChild(sets); teams.appendChild(col);
+    });
+    card.appendChild(teams);
+    box.appendChild(card);
+  });
+}
+
+/* ---- draft gallery ---- */
+function buildGrid(){
+  const g=$("grid"); g.textContent="";
+  /* priority heroes lead the gallery so they are the first thing seen in a ban phase */
+  const ordered=heroes.slice().sort((a,b)=>
+    (b.prio?1:0)-(a.prio?1:0) || a.name.localeCompare(b.name));
+  ordered.forEach(h=>{
+    const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
+    b.appendChild(portrait(h));
+    const mk=document.createElement("span"); mk.className="marks"; b.appendChild(mk);
+    const n=document.createElement("span"); n.className="cn"; n.textContent=h.name; b.appendChild(n);
+    g.appendChild(b);
+  });
+  const e=document.createElement("p"); e.className="gridempty"; e.id="gridEmpty"; e.hidden=true;
+  e.textContent="Nggak ada hero yang cocok.";
+  g.appendChild(e); gridBuilt=true;
+}
+/* which heroes are counter- or combo-relevant at THIS step.
+   Picking: red = beats what they picked, blue = combos with what I picked.
+   Banning: red = beats what I picked (threat), blue = combos with what they picked (enabler). */
+function glowMaps(){
+  const d=S.draft, counter={}, combo={};
+  if(archive()||!d.started||d.done||S.over) return {counter,combo,phase:null};
+  const st=SEQ[d.step], side=sideOf(st.s);
+  const foeSide=side==="blue"?"red":"blue";
+  const mine=slotsFor(side,"pick").map(i=>d.slots[i]).filter(Boolean);
+  const theirs=slotsFor(foeSide,"pick").map(i=>d.slots[i]).filter(Boolean);
+  const beats = st.p==="pick" ? theirs : mine;
+  const withWho = st.p==="pick" ? mine : theirs;
+  if(beats.length) heroes.forEach(h=>{
+    const n=(h.counters||[]).filter(c=>beats.includes(c)).length; if(n) counter[h.id]=n;
+  });
+  withWho.forEach(p=>{ const h=byId.get(p); if(!h) return;
+    (h.combo||[]).forEach(c=>{ combo[c]=(combo[c]||0)+1; }); });
+  return {counter,combo,phase:st.p};
+}
+
+function renderGrid(){
+  if(!gridBuilt) buildGrid();
+  const q=norm(query); let shown=0;
+  const G=glowMaps();
+  const lg=$("legend");
+  const anyRel=Object.keys(G.counter).length||Object.keys(G.combo).length;
+  lg.hidden=!G.phase||!anyRel;
+  if(!lg.hidden){
+    $("legC").textContent = G.phase==="pick" ? "Counter pick musuh" : "Counter pick lo — kandidat ban";
+    $("legK").textContent = G.phase==="pick" ? "Combo sama pick lo" : "Combo buat musuh — kandidat ban";
+  }
+  [...$("grid").children].forEach(b=>{
+    if(!b.dataset.id) return;
+    const h=byId.get(b.dataset.id); if(!h){ b.hidden=true; return; }
+    const passF = filter==="all" ? true : filter==="prio" ? !!h.prio : h.lanes.includes(filter);
+    b.hidden=!(passF && (!q||norm(h.name).includes(q)));
+    if(!b.hidden) shown++;
+    const st=statusFor(h.id);
+    b.classList.toggle("off",st==="used"||st==="idle");
+    b.classList.toggle("locked",st==="locked");
+    b.classList.toggle("waste",st==="wasteban");
+
+    const nc=G.counter[h.id]||0, nk=G.combo[h.id]||0, live=st==="free"||st==="wasteban";
+    const ring = (live&&nc) ? "gl-ctr" : (live&&nk) ? "gl-cmb" : h.prio ? "gl-prio" : null;
+    b.classList.toggle("glow",!!ring);
+    ["gl-ctr","gl-cmb","gl-prio"].forEach(c=>b.classList.toggle(c,c===ring));
+
+    const marks=b.querySelector(".marks"); marks.textContent="";
+    const addMark=(cls,txt)=>{ const s=document.createElement("span"); s.className="mk "+cls; s.textContent=txt; marks.appendChild(s); };
+    if(h.prio) addMark("p","★");
+    if(live&&nc) addMark("c",nc>1?"C"+nc:"C");
+    if(live&&nk) addMark("k",nk>1?"K"+nk:"K");
+
+    const rel=[];
+    if(live&&nc) rel.push(G.phase==="pick"?"counter "+nc+" pick musuh":"counter "+nc+" pick lo");
+    if(live&&nk) rel.push(G.phase==="pick"?"combo sama "+nk+" pick lo":"combo sama "+nk+" pick musuh");
+    b.title = st==="locked" ? h.name+" kekunci GBP buat tim ini"
+            : st==="used" ? h.name+" udah kepake game ini"
+            : st==="wasteban" ? h.name+" udah kekunci GBP buat lawan — ban-nya sia-sia"
+            : (h.prio?"★ Prioritas — ":"")+h.name
+              +(h.lanes.length?" · "+h.lanes.map(l=>LN[l]).join(", "):"")
+              +(rel.length?" · "+rel.join(", "):"");
+    const old=b.querySelector(".ph"), fresh=portrait(h);
+    if(old.innerHTML!==fresh.innerHTML||old.getAttribute("style")!==fresh.getAttribute("style")) b.replaceChild(fresh,old);
+    b.querySelector(".cn").textContent=h.name;
+  });
+  $("gridEmpty").hidden=shown>0;
+  $("galCount").textContent=shown+" hero";
+}
+
+/* ---- hero tab ---- */
+function heroRow(h){
+  const row=document.createElement("div"); row.className="hrow"; row.dataset.id=h.id;
+
+  const thumb=document.createElement("button"); thumb.type="button"; thumb.className="hthumb";
+  thumb.title="Upload gambar "+h.name;
+  thumb.appendChild(portrait(h));
+  const cam=document.createElement("span"); cam.className="cam"; cam.textContent=h.img?"GANTI":"UPLOAD";
+  thumb.appendChild(cam);
+  thumb.onclick=()=>{ uploadTarget=h.id; $("fileOne").click(); };
+  row.appendChild(thumb);
+
+  const name=document.createElement("input"); name.type="text"; name.className="hname"; name.value=h.name;
+  name.setAttribute("aria-label","Nama hero");
+  let nt=null;
+  name.oninput=()=>{ clearTimeout(nt); nt=setTimeout(()=>{
+    const v=name.value.trim(); if(!v) return;
+    h.name=v; h.edited=true; saveHero(h); gridBuilt=false;
+    renderGrid(); renderBoard(); renderMatch();
+  },420); };
+  row.appendChild(name);
+
+  const lanes=document.createElement("div"); lanes.className="hlanes";
+  LANES.forEach(l=>{
+    const b=document.createElement("button"); b.type="button"; b.textContent=LN[l];
+    b.setAttribute("aria-pressed",String(h.lanes.includes(l)));
+    b.onclick=()=>{
+      const i=h.lanes.indexOf(l);
+      if(i>=0) h.lanes.splice(i,1); else h.lanes.push(l);
+      h.edited=true; saveHero(h);
+      b.setAttribute("aria-pressed",String(h.lanes.includes(l)));
+      renderGrid(); renderBoard();
+    };
+    lanes.appendChild(b);
+  });
+  row.appendChild(lanes);
+
+  const dmg=document.createElement("select"); dmg.className="hdmg"+(h.dmg?"":" unset");
+  dmg.setAttribute("aria-label","Tipe damage");
+  [["","Belum diisi"],["physical","Fisik"],["magic","Magis"]].forEach(([v,t])=>{
+    const o=document.createElement("option"); o.value=v; o.textContent=t; dmg.appendChild(o); });
+  dmg.value=h.dmg||"";
+  dmg.onchange=()=>{ h.dmg=dmg.value||null; h.edited=true; saveHero(h);
+    dmg.classList.toggle("unset",!h.dmg); renderMeters(); renderBoard(); };
+  row.appendChild(dmg);
+
+  const star=document.createElement("button"); star.type="button"; star.className="hstar";
+  star.textContent="★"; star.setAttribute("aria-pressed",String(!!h.prio));
+  star.title=h.prio?h.name+" ditandai prioritas":"Tandai "+h.name+" sebagai prioritas";
+  star.onclick=()=>{
+    h.prio=!h.prio; h.edited=true; saveHero(h);
+    star.setAttribute("aria-pressed",String(!!h.prio));
+    star.title=h.prio?h.name+" ditandai prioritas":"Tandai "+h.name+" sebagai prioritas";
+    gridBuilt=false; renderGrid(); renderMeters();
+    if(hFilter==="prio") renderHeroList();
+  };
+  row.appendChild(star);
+
+  const del=document.createElement("button"); del.type="button"; del.className="hdel"+(h.custom?"":" ghost");
+  del.textContent="×"; del.title="Hapus "+h.name;
+  if(h.custom) del.onclick=()=>{
+    heroes=heroes.filter(x=>x.id!==h.id); byId.delete(h.id);
+    store.doc("heroes/"+h.id).delete().catch(()=>{});
+    lsSave(); gridBuilt=false; renderHeroList(); renderGrid(); renderMeters();
+    toast(h.name+" dihapus.");
+  };
+  row.appendChild(del);
+
+  row.ondragover=e=>{ e.preventDefault(); row.classList.add("drop"); };
+  row.ondragleave=()=>row.classList.remove("drop");
+  row.ondrop=e=>{ e.preventDefault(); row.classList.remove("drop");
+    const f=e.dataTransfer.files[0]; if(f) pickAndCrop(h.id,f); };
+  return row;
+}
+
+function renderHeroList(){
+  const list=$("hlist"); list.textContent="";
+  const q=norm(hQuery);
+  const shown=heroes.filter(h=>{
+    if(q && !norm(h.name).includes(q)) return false;
+    if(hFilter==="prio") return !!h.prio;
+    if(hFilter==="noimg") return !h.img;
+    if(hFilter==="nodmg") return !h.dmg;
+    if(hFilter!=="all") return h.lanes.includes(hFilter);
+    return true;
+  });
+  if(!shown.length){
+    const e=document.createElement("p"); e.className="hempty"; e.textContent="Nggak ada hero yang cocok.";
+    list.appendChild(e); return;
+  }
+  const frag=document.createDocumentFragment();
+  shown.forEach(h=>frag.appendChild(heroRow(h)));
+  list.appendChild(frag);
+}
+
+function renderMeters(){
+  const tot=heroes.length;
+  const img=heroes.filter(h=>h.img).length;
+  const dmg=heroes.filter(h=>h.dmg).length;
+  $("mImgTxt").textContent=img+"/"+tot;
+  $("mDmgTxt").textContent=dmg+"/"+tot;
+  $("mImgBar").style.width=(tot?img/tot*100:0)+"%";
+  $("mDmgBar").style.width=(tot?dmg/tot*100:0)+"%";
+  const prio=heroes.filter(h=>h.prio).length;
+  const pn=$("prioNote");
+  pn.hidden=prio===0;
+  if(prio) pn.textContent="★ "+prio+" hero ditandai prioritas. Di tab Draft mereka bakal nyala emas, dan ada filter Prioritas buat liat mereka doang pas fase ban.";
+  const missing=tot-dmg;
+  const nag=$("nagDmg");
+  nag.hidden=missing===0;
+  if(missing) nag.textContent=missing+" hero belum ada tipe damage-nya. Itu sengaja gue kosongin — sumber datanya nggak konsisten, "+
+    "jadi gue nggak mau nebak. Panel komposisi baru akurat setelah ini keisi. Filter \"Belum ada damage\" buat ngerjain sisanya.";
+}
+
+/* ---- board ----
+   Default background is an original lane schematic, not game art.
+   Strokes and tokens are stored in 0..1 coords so they survive any resize. */
+const BLANK_BG="#1d231f";
+let boards=[], curBoard=null, penColor="#ff4d4d", penWidth=3, penMode="pen", tokSide="b";
+let bQuery="", bFilter="all", bGridBuilt=false, boardSaveTimer=null;
+
+function freshBoard(name){
+  return {id:"b"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    name:name||("Papan "+(boards.length+1)),bg:null,strokes:[],tokens:[],at:Date.now()};
+}
+function saveBoard(now){
+  if(!curBoard) return;
+  lsSave();
+  clearTimeout(boardSaveTimer);
+  const go=()=>store.doc("boards/"+curBoard.id).set(curBoard).then(()=>markSaved(true)).catch(()=>markSaved(false));
+  if(now) go(); else boardSaveTimer=setTimeout(go,500);
+}
+function boardCanvas(){ return $("boardCv"); }
+function fitCanvas(){
+  const cv=boardCanvas(), w=$("boardWrap");
+  const r=w.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  cv.width=Math.max(1,Math.round(r.width*dpr)); cv.height=Math.max(1,Math.round(r.height*dpr));
+  drawStrokes();
+}
+function drawStrokes(){
+  const cv=boardCanvas(); if(!cv||!curBoard) return;
+  const ctx=cv.getContext("2d"); const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  const scale=W/1550;
+  curBoard.strokes.forEach(s=>{
+    if(!s.pts||s.pts.length<1) return;
+    ctx.strokeStyle=s.c; ctx.lineWidth=Math.max(1,s.w*scale*1.6);
+    ctx.beginPath();
+    s.pts.forEach((p,i)=>{ const x=p[0]*W,y=p[1]*H; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+    if(s.pts.length===1){ ctx.lineTo(s.pts[0][0]*W+0.1,s.pts[0][1]*H); }
+    ctx.stroke();
+  });
+}
+function renderTokens(){
+  const w=$("boardWrap");
+  [...w.querySelectorAll(".tok")].forEach(n=>n.remove());
+  if(!curBoard) return;
+  curBoard.tokens.forEach((t,i)=>{
+    const h=byId.get(t.id);
+    const b=document.createElement("button"); b.type="button";
+    b.className="tok "+(t.s||"n"); b.dataset.i=i;
+    b.style.left=(t.x*100)+"%"; b.style.top=(t.y*100)+"%";
+    b.title=(h?h.name:t.id)+" — tarik buat mindahin, klik kanan buat hapus";
+    b.appendChild(portrait(h||{name:t.id,img:null}));
+    w.appendChild(b);
+  });
+}
+/* the frame takes the map's own aspect ratio, so nothing is cropped
+   and board coordinates land exactly where they do on the map */
+function applyAR(){
+  $("boardWrap").style.setProperty("--bar",String((curBoard&&curBoard.ar)||1.55));
+}
+function renderBoardBg(){
+  const el=$("boardBgEl"); el.textContent="";
+  const hint=$("boardHint");
+  applyAR();
+  if(curBoard&&curBoard.bg){
+    const i=document.createElement("img"); i.src=imgSrc(curBoard.bg); i.alt="Map";
+    i.onload=()=>{
+      if(!i.naturalWidth||!i.naturalHeight) return;
+      const ar=i.naturalWidth/i.naturalHeight;
+      if(!curBoard.ar||Math.abs(curBoard.ar-ar)>0.01){ curBoard.ar=ar; saveBoard(); }
+      applyAR(); fitCanvas();
+    };
+    el.appendChild(i);
+    el.style.background="";
+    hint.hidden=true;
+  }else{
+    el.style.background=BLANK_BG;
+    hint.hidden=false;
+  }
+}
+function renderBoardSel(){
+  const sel=$("boardSel"); sel.textContent="";
+  boards.forEach(b=>{ const o=document.createElement("option"); o.value=b.id; o.textContent=b.name; sel.appendChild(o); });
+  if(curBoard) sel.value=curBoard.id;
+  const none=!boards.length;
+  ["boardRename","boardDel","boardBg","boardPng","boardClear","boardUndo","toolErase"].forEach(id=>$(id).disabled=none);
+}
+function renderWhiteboard(){
+  renderBoardSel(); renderBoardBg(); renderTokens(); fitCanvas();
+}
+function setBoard(id){
+  curBoard=boards.find(b=>b.id===id)||boards[0]||null;
+  try{ localStorage.setItem("hokdraft.board",curBoard?curBoard.id:""); }catch(e){}
+  renderWhiteboard();
+}
+
+/* pointer drawing */
+let drawing=false, cur=null;
+function relPos(e){
+  const r=$("boardWrap").getBoundingClientRect();
+  return [Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),
+          Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))];
+}
+function hitStroke(p){
+  if(!curBoard) return -1;
+  const tol=0.022;
+  for(let i=curBoard.strokes.length-1;i>=0;i--){
+    const s=curBoard.strokes[i];
+    for(const q of (s.pts||[])){
+      const dx=(q[0]-p[0])*1.55, dy=q[1]-p[1];
+      if(Math.hypot(dx,dy)<tol) return i;
+    }
+  }
+  return -1;
+}
+function boardDown(e){
+  if(!curBoard||e.button===2) return;
+  const p=relPos(e);
+  if(penMode==="erase"){
+    const i=hitStroke(p);
+    if(i>=0){ curBoard.strokes.splice(i,1); drawStrokes(); saveBoard(); }
+    return;
+  }
+  drawing=true; cur={c:penColor,w:penWidth,pts:[p]};
+  curBoard.strokes.push(cur);
+  boardCanvas().setPointerCapture(e.pointerId);
+  drawStrokes();
+}
+function boardMove(e){
+  if(!drawing||!cur) return;
+  const p=relPos(e), last=cur.pts[cur.pts.length-1];
+  if(Math.hypot(p[0]-last[0],p[1]-last[1])<0.002) return;
+  cur.pts.push(p); drawStrokes();
+}
+function boardUp(){ if(!drawing) return; drawing=false; cur=null; saveBoard(); }
+
+/* token drag */
+let dragTok=null;
+$("boardWrap").addEventListener("pointerdown",e=>{
+  const t=e.target.closest(".tok"); if(!t) return;
+  if(e.button===2) return;
+  dragTok={el:t,i:+t.dataset.i}; t.classList.add("drag");
+  t.setPointerCapture(e.pointerId); e.preventDefault();
+});
+$("boardWrap").addEventListener("pointermove",e=>{
+  if(!dragTok) return;
+  const p=relPos(e);
+  dragTok.el.style.left=(p[0]*100)+"%"; dragTok.el.style.top=(p[1]*100)+"%";
+});
+$("boardWrap").addEventListener("pointerup",e=>{
+  if(!dragTok) return;
+  const p=relPos(e), t=curBoard&&curBoard.tokens[dragTok.i];
+  if(t){ t.x=p[0]; t.y=p[1]; saveBoard(); }
+  dragTok.el.classList.remove("drag"); dragTok=null;
+});
+$("boardWrap").addEventListener("contextmenu",e=>{
+  const t=e.target.closest(".tok"); if(!t) return;
+  e.preventDefault();
+  const i=+t.dataset.i;
+  if(curBoard&&curBoard.tokens[i]){
+    const nm=(byId.get(curBoard.tokens[i].id)||{name:"Token"}).name;
+    curBoard.tokens.splice(i,1); renderTokens(); saveBoard(); toast(nm+" diangkat dari papan.");
+  }
+});
+function addToken(id){
+  if(!curBoard){ toast("Bikin papan dulu."); return; }
+  const n=curBoard.tokens.length;
+  curBoard.tokens.push({id,s:tokSide,x:0.5+((n%5)-2)*0.06,y:0.5+Math.floor(n/5)*0.07});
+  renderTokens(); saveBoard();
+  toast((byId.get(id)||{name:id}).name+" ditaruh — tarik buat mindahin.");
+}
+async function boardToPng(){
+  if(!curBoard) return;
+  const ar=curBoard.ar||1.55;
+  const W=1600, H=Math.round(W/ar);
+  const out=document.createElement("canvas"); out.width=W; out.height=H;
+  const ctx=out.getContext("2d");
+  const img=$("boardBgEl").querySelector("img");
+  await new Promise(res=>{
+    if(!img){ ctx.fillStyle=BLANK_BG; ctx.fillRect(0,0,W,H); return res(); }
+    const i2=new Image();
+    i2.onload=()=>{ ctx.drawImage(i2,0,0,W,H); res(); };
+    i2.onerror=()=>{ ctx.fillStyle=BLANK_BG; ctx.fillRect(0,0,W,H); res(); };
+    i2.src=img.src;
+  });
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  const kw=W/1550;
+  curBoard.strokes.forEach(s=>{
+    if(!s.pts||!s.pts.length) return;
+    ctx.strokeStyle=s.c; ctx.lineWidth=Math.max(1,s.w*kw*1.6);
+    ctx.beginPath();
+    s.pts.forEach((p,i)=>{ const x=p[0]*W,y=p[1]*H; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+    if(s.pts.length===1) ctx.lineTo(s.pts[0][0]*W+0.1,s.pts[0][1]*H);
+    ctx.stroke();
+  });
+  const RING={b:"#4d92d9",r:"#e0645c",n:"#f0ead8"};
+  for(const t of curBoard.tokens){
+    const h=byId.get(t.id); const R=Math.round(34*kw), x=t.x*W, y=t.y*H;
+    ctx.save(); ctx.beginPath(); ctx.arc(x,y,R,0,Math.PI*2); ctx.closePath();
+    if(h&&h.img){
+      const im=await new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>res(null); i.crossOrigin="anonymous"; i.src=imgSrc(h.img); });
+      if(im){ ctx.clip(); ctx.drawImage(im,x-R,y-R,R*2,R*2); }
+      else { ctx.fillStyle="#44504a"; ctx.fill(); }
+    }else{
+      ctx.fillStyle="#44504a"; ctx.fill(); ctx.clip();
+      ctx.fillStyle="#fff"; ctx.font="700 24px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText(monogram((h||{name:t.id}).name),x,y);
+    }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(x,y,R,0,Math.PI*2);
+    ctx.strokeStyle=RING[t.s]||RING.n; ctx.lineWidth=Math.max(2,5*kw); ctx.stroke();
+  }
+  const blob=await new Promise(r=>out.toBlob(r,"image/png"));
+  await saveFile((curBoard.name||"papan").replace(/[^\w\-]+/g,"_")+".png",blob);
+  toast("PNG kesimpen.");
+}
+
+/* ---- full backup: data + every referenced image, as one zip ---- */
+const EXT={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif","image/svg+xml":"svg"};
+async function exportAll(){
+  if(typeof JSZip==="undefined"){ toast("Modul zip belum kemuat, coba lagi sebentar."); return; }
+  const zip=new JSZip();
+  const want=new Map();                       /* assetId -> path inside the zip, minus extension */
+  const heroesOut=heroes.map(h=>{
+    const o={id:h.id,name:h.name,lanes:h.lanes||[],dmg:h.dmg||null,prio:!!h.prio,
+      counters:h.counters||[],combo:h.combo||[],custom:!!h.custom,img:null};
+    if(h.img){ o.img="images/heroes/"+h.id; want.set(h.img,"images/heroes/"+h.id); }
+    return o;
+  });
+  const teamsOut=teams.map(t=>{
+    const o=JSON.parse(JSON.stringify(t));
+    if(t.logo){ o.logo="images/teams/"+t.id; want.set(t.logo,"images/teams/"+t.id); }
+    return o;
+  });
+  const boardsOut=boards.map(b=>{
+    const o=JSON.parse(JSON.stringify(b));
+    if(b.bg){ o.bg="images/maps/"+b.id; want.set(b.bg,"images/maps/"+b.id); }
+    return o;
+  });
+  zip.file("data.json",JSON.stringify({
+    version:1,exportedAt:new Date().toISOString(),
+    heroes:heroesOut,teams:teamsOut,boards:boardsOut,series:S
+  },null,1));
+
+  let ok=0,fail=0,i=0;
+  const total=want.size;
+  for(const [id,base] of want){
+    i++;
+    if(i%10===0||i===1) toast("Ngambil gambar "+i+"/"+total+"…");
+    try{
+      const blob=await getImageBlob(id);
+      if(!blob) throw new Error("tidak ada");
+      const ext=EXT[blob.type]||"jpg";
+      zip.file(base+"."+ext,blob);
+      ok++;
+    }catch(e){ fail++; console.warn("gagal ambil",id,base,e); }
+  }
+  toast("Bikin ZIP…");
+  const out=await zip.generateAsync({type:"blob",compression:"STORE"});
+  const name="hok-draft-backup-"+new Date().toISOString().slice(0,10)+".zip";
+  await saveFile(name,out);
+  toast(ok+" gambar + data kesimpen"+(fail?" · "+fail+" gagal":"")+" ("+Math.round(out.size/1048576)+" MB)");
+}
+
+function buildBGrid(){
+  const g=$("bGrid"); g.textContent="";
+  heroes.forEach(h=>{
+    const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
+    b.appendChild(portrait(h));
+    const mk=document.createElement("span"); mk.className="marks";
+    if(h.prio){ const s=document.createElement("span"); s.className="mk p"; s.textContent="★"; mk.appendChild(s); }
+    b.appendChild(mk);
+    const n=document.createElement("span"); n.className="cn"; n.textContent=h.name; b.appendChild(n);
+    g.appendChild(b);
+  });
+  const e=document.createElement("p"); e.className="gridempty"; e.id="bEmpty"; e.hidden=true;
+  e.textContent="Nggak ada hero yang cocok."; g.appendChild(e);
+  bGridBuilt=true;
+}
+function renderBGrid(){
+  if(!bGridBuilt) buildBGrid();
+  const q=norm(bQuery); let shown=0;
+  [...$("bGrid").children].forEach(b=>{
+    if(!b.dataset.id) return;
+    const h=byId.get(b.dataset.id); if(!h){ b.hidden=true; return; }
+    const passF = bFilter==="all" ? true : bFilter==="prio" ? !!h.prio : h.lanes.includes(bFilter);
+    b.hidden=!(passF && (!q||norm(h.name).includes(q)));
+    if(!b.hidden) shown++;
+    b.classList.toggle("glow",!!h.prio); b.classList.toggle("gl-prio",!!h.prio);
+    b.title="Taruh "+h.name+" di papan";
+    const old=b.querySelector(".ph"), fresh=portrait(h);
+    if(old.innerHTML!==fresh.innerHTML||old.getAttribute("style")!==fresh.getAttribute("style")) b.replaceChild(fresh,old);
+    b.querySelector(".cn").textContent=h.name;
+  });
+  $("bEmpty").hidden=shown>0;
+}
+
+/* ---- teams ---- */
+let teams=[], logoTarget=null;
+function freshTeam(){
+  return {id:"t"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    name:"Tim baru",logo:null,players:[],history:[],at:Date.now()};
+}
+function saveTeam(t){
+  lsSave();
+  store.doc("teams/"+t.id).set(t).then(()=>markSaved(true)).catch(()=>markSaved(false));
+}
+function renderTeams(){
+  const g=$("tgrid"); g.textContent="";
+  if(!teams.length){
+    const e=document.createElement("p"); e.className="hempty";
+    e.textContent="Belum ada tim. Tekan + Tim baru buat mulai.";
+    g.appendChild(e); return;
+  }
+  teams.forEach(t=>{
+    const c=document.createElement("div"); c.className="tcard";
+    const top=document.createElement("div"); top.className="tctop";
+    const lg=document.createElement("button"); lg.type="button"; lg.className="tlogo"; lg.title="Upload logo "+t.name;
+    lg.appendChild(portrait({name:t.name,img:t.logo}));
+    const cam=document.createElement("span"); cam.className="cam"; cam.textContent=t.logo?"GANTI":"LOGO";
+    lg.appendChild(cam);
+    lg.onclick=()=>{ logoTarget=t.id; $("fileLogo").click(); };
+    top.appendChild(lg);
+    const nm=document.createElement("input"); nm.type="text"; nm.className="tcname"; nm.value=t.name; nm.maxLength=28;
+    nm.setAttribute("aria-label","Nama tim");
+    let nt=null;
+    nm.oninput=()=>{ clearTimeout(nt); nt=setTimeout(()=>{
+      t.name=nm.value.trim()||"Tim baru"; saveTeam(t); renderTeamList();
+      let touched=false;
+      ["t1","t2"].forEach(k=>{ if(S.link&&S.link[k]===t.id){ S.teams[k]=t.name; touched=true; } });
+      if(touched){ queueSave(); renderDraft(); }
+    },380); };
+    top.appendChild(nm);
+    c.appendChild(top);
+
+    const pl=document.createElement("div"); pl.className="plist";
+    (t.players||[]).forEach((p,i)=>{
+      const r=document.createElement("div"); r.className="prow";
+      const pn=document.createElement("input"); pn.type="text"; pn.value=p.name||""; pn.placeholder="Nama pemain";
+      pn.setAttribute("aria-label","Nama pemain");
+      let pt=null;
+      pn.oninput=()=>{ clearTimeout(pt); pt=setTimeout(()=>{ p.name=pn.value; saveTeam(t); },380); };
+      const rl=document.createElement("select"); rl.setAttribute("aria-label","Role pemain");
+      [["","Role"],...LANES.map(l=>[l,LN[l]])].forEach(([v,x])=>{
+        const o=document.createElement("option"); o.value=v; o.textContent=x; rl.appendChild(o); });
+      rl.value=p.role||"";
+      rl.onchange=()=>{ p.role=rl.value||null; saveTeam(t); };
+      const x=document.createElement("button"); x.type="button"; x.className="px"; x.textContent="×";
+      x.title="Hapus pemain";
+      x.onclick=()=>{ t.players.splice(i,1); saveTeam(t); renderTeams(); };
+      r.append(pn,rl,x); pl.appendChild(r);
+    });
+    c.appendChild(pl);
+
+    const hist=document.createElement("div"); hist.className="plist";
+    (t.history||[]).slice().reverse().forEach(h=>{
+      const wrap=document.createElement("div"); wrap.className="hitem";
+      const r=document.createElement("button"); r.type="button"; r.className="srow";
+      const res=document.createElement("b"); res.className=h.win?"wn":"ls";
+      res.textContent=h.win?"Menang":"Kalah";
+      const s=document.createElement("span"); s.textContent=h.score+" vs "+(h.vs||"—")
+        +((h.games&&h.games.length)?" · "+h.games.length+" game":"")+(h.mode==="arsip"?" · arsip":"");
+      const d=document.createElement("span"); d.className="d";
+      d.textContent=new Date(h.at).toLocaleDateString("id-ID",{day:"2-digit",month:"short"});
+      const cv=document.createElement("span"); cv.className="chev"; cv.textContent="›";
+      r.append(res,s,d,cv);
+      const body=document.createElement("div"); body.className="hbody"; body.hidden=true;
+      if(h.games&&h.games.length){
+        h.games.forEach(g=>{
+          const gr=document.createElement("div"); gr.className="hg";
+          const hd=document.createElement("div"); hd.className="hgh";
+          const gl=document.createElement("b"); gl.textContent="G"+g.g;
+          const sc=document.createElement("span");
+          sc.className="sidechip "+(g.side==="blue"?"b":"r"); sc.textContent=g.side==="blue"?"Biru":"Merah";
+          const wl=document.createElement("span"); wl.className="wl "+(g.win?"wn":"ls");
+          wl.textContent=g.win?"menang":"kalah";
+          hd.append(gl,sc,wl); gr.appendChild(hd);
+          const mk=(ids,label)=>{
+            const row=document.createElement("div"); row.className="hgr";
+            const k=document.createElement("span"); k.className="k2"; k.textContent=label;
+            row.appendChild(k);
+            const th=document.createElement("div"); th.className="gthumbs";
+            (ids||[]).forEach(id=>{
+              const hh=byId.get(id)||{name:id,img:null};
+              const b2=document.createElement("div"); b2.className="gth"; b2.title=hh.name;
+              b2.appendChild(portrait(hh)); th.appendChild(b2);
+            });
+            if(!(ids||[]).length){ const e=document.createElement("span"); e.className="gnone"; e.textContent="—"; th.appendChild(e); }
+            row.appendChild(th); return row;
+          };
+          gr.appendChild(mk(g.mine,"Pick kita"));
+          gr.appendChild(mk(g.theirs,"Pick lawan"));
+          if(g.theirBans&&g.theirBans.length) gr.appendChild(mk(g.theirBans,"Ban lawan"));
+          body.appendChild(gr);
+        });
+      }else{
+        const e=document.createElement("p"); e.className="gnone";
+        e.textContent="Seri ini disimpan sebelum draft per game ikut tercatat.";
+        body.appendChild(e);
+      }
+      r.onclick=()=>{ body.hidden=!body.hidden; r.classList.toggle("open",!body.hidden); };
+      wrap.append(r,body); hist.appendChild(wrap);
+    });
+    if((t.history||[]).length){
+      const lbl=document.createElement("span"); lbl.className="lbl";
+      lbl.textContent="Riwayat seri ("+t.history.length+")";
+      c.appendChild(lbl); c.appendChild(hist);
+    }
+
+    const f=document.createElement("div"); f.className="tfoot";
+    const ap=document.createElement("button"); ap.className="pill sm"; ap.textContent="+ Pemain";
+    ap.onclick=()=>{ t.players=t.players||[]; if(t.players.length>=8){ toast("Maks 8 pemain."); return; }
+      t.players.push({name:"",role:null}); saveTeam(t); renderTeams(); };
+    const sp=document.createElement("span"); sp.className="sp";
+    const del=document.createElement("button"); del.className="pill sm danger"; del.textContent="Hapus";
+    del.onclick=()=>{
+      teams=teams.filter(x=>x.id!==t.id);
+      store.doc("teams/"+t.id).delete().catch(()=>{});
+      if(S.link){ if(S.link.t1===t.id) S.link.t1=null; if(S.link.t2===t.id) S.link.t2=null; queueSave(); }
+      lsSave(); renderTeamList(); renderTeams(); toast(t.name+" dihapus.");
+    };
+    f.append(ap,sp,del); c.appendChild(f);
+    g.appendChild(c);
+  });
+}
+function renderTeamList(){
+  const dl=$("teamList"); if(!dl) return;
+  dl.textContent="";
+  teams.forEach(t=>{ const o=document.createElement("option"); o.value=t.name; dl.appendChild(o); });
+}
+/* typing a name in the draft either picks a registered team or registers a new one */
+function linkTeamByName(slot,raw){
+  const name=(raw||"").trim();
+  if(!name){ return; }
+  S.teams[slot]=name;
+  S.link=S.link||{t1:null,t2:null};
+  let t=teams.find(x=>norm(x.name)===norm(name));
+  if(!t){
+    t=freshTeam(); t.name=name; teams.push(t); saveTeam(t); renderTeamList();
+    toast(name+" didaftarin ke tab Tim.");
+  }
+  S.link[slot]=t.id;
+  queueSave(); renderDraft();
+  if(view==="team") renderTeams();
+}
+/* store the full drafts, not just the score — the picks are the point of archiving.
+   Each team keeps its own perspective so "what do they always pick" is a direct read. */
+function archiveSeries(){
+  if(!S.results.length) return 0;
+  if(!S.link||(!S.link.t1&&!S.link.t2)) return -1;
+  if(!S.sid) S.sid="s"+Date.now().toString(36);
+  const stamp=Date.now();
+  let n=0;
+  ["t1","t2"].forEach(k=>{
+    const id=S.link[k]; if(!id) return;
+    const t=teams.find(x=>x.id===id); if(!t) return;
+    const foe=k==="t1"?"t2":"t1";
+    const games=S.results.map(r=>{
+      const mine=r.blueTeam===k?"blue":"red";
+      return {g:r.game,side:mine,win:r.winner===k,
+        mine:(mine==="blue"?r.blue:r.red)||[],
+        theirs:(mine==="blue"?r.red:r.blue)||[],
+        myBans:(mine==="blue"?r.blueBans:r.redBans)||null,
+        theirBans:(mine==="blue"?r.redBans:r.blueBans)||null};
+    });
+    t.history=(t.history||[]).filter(h=>h.sid!==S.sid);
+    t.history.push({sid:S.sid,at:stamp,vs:tName(foe),mode:S.mode||"bp",
+      win:S.score[k]>S.score[foe],score:S.score[k]+"-"+S.score[foe],games});
+    saveTeam(t); n++;
+  });
+  if(n){ S.savedAt=stamp; queueSave(); }
+  return n;
+}
+function saveSeriesNow(){
+  const n=archiveSeries();
+  if(n===0){ toast("Belum ada game yang selesai buat disimpen."); return; }
+  if(n===-1){ toast("Isi nama tim dulu di atas — seri nyimpennya ke tim."); return; }
+  renderDraft(); if(view==="team") renderTeams();
+  toast(S.results.length+" game kesimpen ke "+(n===2?"dua tim":"tim yang kepasang")+".");
+}
+
+/* ---- relations: counters are directional, combos are mutual ---- */
+let relSubject=null, relArm="subject", relQuery="", relFilter="all", relGridBuilt=false;
+
+function relAvatar(h,cls){
+  const s=document.createElement("span"); s.className=cls;
+  s.appendChild(portrait(h)); return s;
+}
+function relChip(id,onRemove){
+  const h=byId.get(id)||{name:id,img:null};
+  const c=document.createElement("span"); c.className="rchip"+(onRemove?"":" ro"); c.title=h.name;
+  c.appendChild(relAvatar(h,"cav"));
+  const n=document.createElement("span"); n.className="nm2"; n.textContent=h.name; c.appendChild(n);
+  if(onRemove){
+    const x=document.createElement("button"); x.type="button"; x.className="x"; x.textContent="×";
+    x.title="Hapus "+h.name; x.onclick=onRemove; c.appendChild(x);
+  }
+  return c;
+}
+function fillChips(el,ids,onRemove){
+  el.textContent="";
+  if(!ids.length){ const e=document.createElement("span"); e.className="none"; e.textContent="Belum ada"; el.appendChild(e); return; }
+  ids.forEach(id=>el.appendChild(relChip(id,onRemove?()=>onRemove(id):null)));
+}
+function setArm(mode){
+  relArm=mode;
+  $("armCounters").classList.toggle("on",mode==="counters");
+  $("armCombo").classList.toggle("on",mode==="combo");
+  const note=$("armNote");
+  note.classList.toggle("on",mode!=="subject");
+  note.textContent = mode==="subject"
+    ? (relSubject?"Klik hero buat ganti hero yang lagi diatur.":"Klik hero di kanan buat mulai.")
+    : mode==="counters"
+      ? "Klik hero yang DIKALAHIN sama "+tn(relSubject)+". Klik lagi buat batal."
+      : "Klik hero yang COMBO sama "+tn(relSubject)+". Klik lagi buat batal.";
+  relGridBuilt=false; renderRelGrid();
+}
+const tn=id=>(byId.get(id)||{name:"?"}).name;
+
+function renderRel(){
+  const box=$("subj"); box.textContent="";
+  if(!relSubject){
+    box.className="subj empty";
+    box.textContent="Pilih hero dulu dari panel kanan.";
+    fillChips($("listCounters"),[]); fillChips($("listCombo"),[]); fillChips($("listBy"),[]);
+    $("armCounters").disabled=true; $("armCombo").disabled=true;
+    setArmNoteOnly(); return;
+  }
+  const h=byId.get(relSubject);
+  if(!h){ relSubject=null; return renderRel(); }
+  box.className="subj";
+  box.appendChild(relAvatar(h,"sav"));
+  const m=document.createElement("div"); m.className="meta2";
+  const b=document.createElement("b"); b.textContent=h.name;
+  const s=document.createElement("span");
+  s.textContent=(h.lanes.length?h.lanes.map(l=>LN[l]).join(", "):"Lane belum diisi")
+    +(h.dmg?" · "+(h.dmg==="magic"?"Magis":"Fisik"):"");
+  m.append(b,s); box.appendChild(m);
+  const chg=document.createElement("button"); chg.className="pill sm chg"; chg.textContent="Ganti hero";
+  chg.onclick=()=>setArm("subject"); box.appendChild(chg);
+
+  $("armCounters").disabled=false; $("armCombo").disabled=false;
+  fillChips($("listCounters"),h.counters,id=>{
+    h.counters=h.counters.filter(x=>x!==id); h.edited=true; saveHero(h); renderRel();
+  });
+  fillChips($("listCombo"),h.combo,id=>{
+    h.combo=h.combo.filter(x=>x!==id); h.edited=true; saveHero(h);
+    const o=byId.get(id); if(o){ o.combo=(o.combo||[]).filter(x=>x!==h.id); o.edited=true; saveHero(o); }
+    renderRel();
+  });
+  fillChips($("listBy"),heroes.filter(x=>(x.counters||[]).includes(h.id)).map(x=>x.id),null);
+  setArmNoteOnly();
+  renderRelGrid();
+}
+function setArmNoteOnly(){
+  const note=$("armNote");
+  note.classList.toggle("on",relArm!=="subject"&&!!relSubject);
+  note.textContent = (relArm==="subject"||!relSubject)
+    ? (relSubject?"Klik hero buat ganti hero yang lagi diatur.":"Klik hero di kanan buat mulai.")
+    : relArm==="counters"
+      ? "Klik hero yang DIKALAHIN sama "+tn(relSubject)+". Klik lagi buat batal."
+      : "Klik hero yang COMBO sama "+tn(relSubject)+". Klik lagi buat batal.";
+}
+function buildRelGrid(){
+  const g=$("relGrid"); g.textContent="";
+  heroes.forEach(h=>{
+    const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
+    b.appendChild(portrait(h));
+    const mk=document.createElement("span"); mk.className="marks";
+    if(h.prio){ const s=document.createElement("span"); s.className="mk p"; s.textContent="★"; mk.appendChild(s); }
+    b.appendChild(mk);
+    const n=document.createElement("span"); n.className="cn"; n.textContent=h.name; b.appendChild(n);
+    g.appendChild(b);
+  });
+  const e=document.createElement("p"); e.className="gridempty"; e.id="relEmpty"; e.hidden=true;
+  e.textContent="Nggak ada hero yang cocok."; g.appendChild(e);
+  relGridBuilt=true;
+}
+function renderRelGrid(){
+  if(!relGridBuilt) buildRelGrid();
+  const q=norm(relQuery); let shown=0;
+  const subj=relSubject?byId.get(relSubject):null;
+  const armed=subj&&relArm!=="subject"?(subj[relArm]||[]):[];
+  [...$("relGrid").children].forEach(b=>{
+    if(!b.dataset.id) return;
+    const h=byId.get(b.dataset.id); if(!h){ b.hidden=true; return; }
+    const passF = relFilter==="all" ? true : relFilter==="prio" ? !!h.prio : h.lanes.includes(relFilter);
+    b.hidden=!(passF && (!q||norm(h.name).includes(q)));
+    if(!b.hidden) shown++;
+    b.classList.remove("off","locked","waste","gl-ctr","gl-cmb");
+    b.classList.toggle("glow",!!h.prio);
+    b.classList.toggle("gl-prio",!!h.prio);
+    b.classList.toggle("inlist",armed.includes(h.id));
+    b.classList.toggle("subjnow",!!subj&&relArm!=="subject"&&h.id===subj.id);
+    b.title = relArm==="subject" ? "Atur "+h.name
+            : h.id===relSubject ? "Hero ini lagi diatur"
+            : (armed.includes(h.id)?"Hapus ":"Tambah ")+h.name;
+    const old=b.querySelector(".ph"), fresh=portrait(h);
+    if(old.innerHTML!==fresh.innerHTML||old.getAttribute("style")!==fresh.getAttribute("style")) b.replaceChild(fresh,old);
+    b.querySelector(".cn").textContent=h.name;
+  });
+  $("relEmpty").hidden=shown>0;
+  $("relCount").textContent=shown+" hero";
+}
+function relClick(id){
+  if(relArm==="subject"||!relSubject){ relSubject=id; setArm("counters"); renderRel(); return; }
+  const subj=byId.get(relSubject); if(!subj||id===subj.id){ toast("Nggak bisa relasi ke diri sendiri."); return; }
+  const list=relArm==="counters"?"counters":"combo";
+  subj[list]=subj[list]||[];
+  const at=subj[list].indexOf(id);
+  if(at>=0){
+    subj[list].splice(at,1);
+    if(list==="combo"){ const o=byId.get(id); if(o){ o.combo=(o.combo||[]).filter(x=>x!==subj.id); o.edited=true; saveHero(o); } }
+    toast(tn(id)+" dihapus.");
+  }else{
+    subj[list].push(id);
+    if(list==="combo"){ const o=byId.get(id); if(o){ o.combo=o.combo||[]; if(!o.combo.includes(subj.id)) o.combo.push(subj.id); o.edited=true; saveHero(o); } }
+    toast(list==="counters"?subj.name+" kuat lawan "+tn(id):subj.name+" combo sama "+tn(id));
+  }
+  subj.edited=true; saveHero(subj); renderRel();
+}
+
+/* ---- draft suggestions, built only from what the user entered ---- */
+function topOf(map,n){
+  return Object.entries(map).sort((a,b)=>b[1]-a[1]||tn(a[0]).localeCompare(tn(b[0]))).slice(0,n||10);
+}
+function suggest(){
+  const d=S.draft;
+  if(archive()||!d.started||d.done||S.over) return null;
+  const st=SEQ[d.step], side=sideOf(st.s), me=teamOnSide(side), foe=otherTeam(me);
+  const foeSide=side==="blue"?"red":"blue";
+  const mine=slotsFor(side,"pick").map(i=>d.slots[i]).filter(Boolean);
+  const theirs=slotsFor(foeSide,"pick").map(i=>d.slots[i]).filter(Boolean);
+  const used=usedSet();
+  const free=id=>byId.has(id)&&!used.has(id);
+
+  if(st.p==="pick"){
+    const combo={},counter={};
+    mine.forEach(p=>{ const h=byId.get(p); if(!h) return;
+      (h.combo||[]).forEach(c=>{ if(free(c)&&!S.gbp[me].includes(c)) combo[c]=(combo[c]||0)+1; }); });
+    if(theirs.length) heroes.forEach(h=>{
+      if(!free(h.id)||S.gbp[me].includes(h.id)) return;
+      const n=(h.counters||[]).filter(c=>theirs.includes(c)).length;
+      if(n) counter[h.id]=n;
+    });
+    return {kind:"pick",rows:[
+      ["Combo sama pick lo",topOf(combo,10)],
+      ["Counter buat pick musuh",topOf(counter,10)]
+    ]};
+  }
+  const threat={};
+  if(mine.length) heroes.forEach(h=>{
+    if(!free(h.id)||S.gbp[foe].includes(h.id)) return;
+    const n=(h.counters||[]).filter(c=>mine.includes(c)).length;
+    if(n) threat[h.id]=n;
+  });
+  return {kind:"ban",rows:[["Bahaya buat pick lo — kandidat ban",topOf(threat,10)]]};
+}
+function renderSuggest(){
+  const s=suggest();
+  const sect=$("sugSect");
+  const anyData=heroes.some(h=>(h.counters&&h.counters.length)||(h.combo&&h.combo.length));
+  if(!s||!anyData){ sect.hidden=true; return; }
+  sect.hidden=false;
+  const d=S.draft, st=SEQ[d.step], side=sideOf(st.s);
+  $("sugTitle").textContent = s.kind==="pick" ? "Saran pick" : "Saran ban";
+  $("sugNote").textContent = "buat "+tName(teamOnSide(side));
+  const body=$("sugBody"); body.textContent="";
+  s.rows.forEach(([label,items])=>{
+    const row=document.createElement("div"); row.className="sugrow";
+    const k=document.createElement("span"); k.className="k"; k.textContent=label; row.appendChild(k);
+    if(!items.length){
+      const e=document.createElement("span"); e.className="sugempty"; e.textContent="Belum ada yang cocok dari data lo.";
+      row.appendChild(e);
+    }else{
+      const wrap=document.createElement("div"); wrap.className="sugs";
+      items.forEach(([id,n])=>{
+        const h=byId.get(id);
+        const b=document.createElement("button"); b.type="button"; b.className="sugp"; b.dataset.id=id;
+        b.title=h.name+" — cocok sama "+n+" hero";
+        const box=document.createElement("div"); box.className="box2"; box.appendChild(portrait(h));
+        b.appendChild(box);
+        if(n>1){ const c=document.createElement("span"); c.className="n"; c.textContent=n; b.appendChild(c); }
+        const nm=document.createElement("span"); nm.className="pn2"; nm.textContent=h.name; b.appendChild(nm);
+        b.onclick=()=>pickHero(id);
+        wrap.appendChild(b);
+      });
+      row.appendChild(wrap);
+    }
+    body.appendChild(row);
+  });
+}
+
+/* ---- view switching ---- */
+function setView(v){
+  view=v;
+  $("viewDraft").hidden = v!=="draft";
+  $("viewHero").hidden  = v!=="hero";
+  $("viewRel").hidden   = v!=="rel";
+  $("viewBoard").hidden = v!=="board";
+  $("viewTeam").hidden  = v!=="team";
+  $("tabDraft").setAttribute("aria-selected",String(v==="draft"));
+  $("tabHero").setAttribute("aria-selected",String(v==="hero"));
+  $("tabRel").setAttribute("aria-selected",String(v==="rel"));
+  $("tabBoard").setAttribute("aria-selected",String(v==="board"));
+  $("tabTeam").setAttribute("aria-selected",String(v==="team"));
+  try{ if(location.hash.replace("#","")!==v) history.replaceState(null,"","#"+v); }catch(e){}
+  if(v==="hero"){ renderHeroList(); renderMeters(); }
+  if(v==="rel"){ relGridBuilt=false; renderRel(); renderRelGrid(); }
+  if(v==="board"){ bGridBuilt=false; renderWhiteboard(); renderBGrid(); }
+  if(v==="team"){ renderTeams(); }
+}
+
+/* ---- actions ---- */
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
+function scrollToTurn(){ try{ $("turn").scrollIntoView({block:"center",behavior:"smooth"}); }catch(e){} }
+
+function tapSlot(i){
+  const d=S.draft;
+  if(!archive()||!d.started||S.over) return;
+  if(d.slots[i]){
+    const nm=(byId.get(d.slots[i])||{name:"Slot"}).name;
+    d.slots[i]=null; d.done=false; d.target=i;
+    queueSave(); renderDraft(); toast(nm+" dikosongin.");
+  }else{ d.target=i; renderDraft(); }
+}
+function pickHero(id){
+  const d=S.draft;
+  if(!d.started||S.over){ if(!d.started&&!S.over) toast("Tekan Mulai game dulu."); return; }
+  const st=statusFor(id);
+  if(st==="used"){ toast((byId.get(id)||{}).name+" udah kepake game ini."); return; }
+  if(archive()){
+    if(d.target==null){ toast("Klik slot pick yang mau diisi dulu."); return; }
+    const h=byId.get(id), at=d.target;
+    d.slots[at]=id; lastPlaced=at;
+    d.target=nextEmpty(at);
+    d.done=pickCount()===10;
+    queueSave(); renderDraft();
+    toast(h.name+" → "+tName(teamOnSide(sideOf(SEQ[at].s)))+" ("+pickCount()+"/10)");
+    return;
+  }
+  if(d.done){ return; }
+  if(st==="locked"){ toast((byId.get(id)||{}).name+" kekunci GBP buat tim ini."); return; }
+  const step=SEQ[d.step], side=sideOf(step.s), h=byId.get(id);
+  const wasted = st==="wasteban";
+  const n=d.slots.slice(0,d.step).filter((x,i)=>SEQ[i].p===step.p&&sideOf(SEQ[i].s)===side).length+1;
+  d.slots[d.step]=id; lastPlaced=d.step; d.step++;
+  if(d.step>=SEQ.length) d.done=true;
+  queueSave(); renderDraft();
+  toast(wasted
+    ? h.name+" di-ban, tapi "+tName(otherTeam(teamOnSide(side)))+" emang udah nggak bisa pakai dia."
+    : h.name+" → "+(step.p==="ban"?"Ban":"Pick")+" "+n+" "+tName(teamOnSide(side)));
+}
+function undo(){
+  const d=S.draft; if(!d.started) return;
+  if(archive()){
+    if(lastPlaced>=0&&d.slots[lastPlaced]){ d.slots[lastPlaced]=null; d.target=lastPlaced; }
+    else{ const f=pickSlots().filter(i=>d.slots[i]); if(!f.length) return;
+      const i=f[f.length-1]; d.slots[i]=null; d.target=i; }
+    d.done=false; lastPlaced=-1; queueSave(); renderDraft(); return;
+  }
+  if(d.step===0) return;
+  d.step--; d.slots[d.step]=null; d.done=false; queueSave(); renderDraft(); }
+function startGame(){
+  if(S.over){ toast("Seri udah selesai. Tekan Reset seri dulu."); return; }
+  if(S.draft.started && !S.draft.done){ toast("Game "+S.game+" udah jalan — klik hero di panel kanan."); scrollToTurn(); return; }
+  if(S.draft.done){ toast("Draft game ini udah penuh. Tentukan pemenangnya dulu."); scrollToTurn(); return; }
+  S.draft.started=true; S.draft.step=0;
+  if(archive()){
+    S.draft.target=pickSlots()[0];
+    queueSave(); renderDraft();
+    toast("Mode arsip — klik slot pick, terus pilih heronya.");
+    return;
+  }
+  queueSave(); renderDraft();
+  toast("Game "+S.game+" mulai — "+tName(teamOnSide("blue"))+" (biru) ban ke-1.");
+}
+function resetGame(){ S.draft=freshDraft(S.draft.blueTeam); queueSave(); renderDraft(); toast("Game diulang."); }
+function resetSeries(){ const lk=S.link; S=freshSeries(S.format,S.teams,S.mode,S.autoSwap);
+  if(lk) S.link=lk; queueSave(); renderDraft(); toast("Seri direset. GBP dikosongin, nama tim tetap."); }
+/* always available: it only relabels which team sits on which side,
+   so a draft already in progress keeps its picks and just gets the right owners */
+function swapSides(){
+  if(S.over){ toast("Seri udah selesai. Tekan Reset seri dulu."); return; }
+  S.draft.blueTeam=otherTeam(S.draft.blueTeam);
+  queueSave(); renderDraft();
+  const placed=S.draft.slots.filter(Boolean).length;
+  toast(tName(S.draft.blueTeam)+" sekarang di biru"+(placed?" — "+placed+" pilihan ikut pindah pemilik.":" (first pick)."));
+}
+/* sides alternate every game regardless of result; use Tukar sisi to override */
+function recordWinner(side){
+  const d=S.draft;
+  if(S.over) return;
+  if(archive()){ if(!d.started||pickCount()===0) return; }
+  else if(!d.done) return;
+  const winTeam=teamOnSide(side), loseTeam=otherTeam(winTeam);
+  ["blue","red"].forEach(s=>{
+    const t=teamOnSide(s);
+    slotsFor(s,"pick").forEach(i=>{ const id=d.slots[i]; if(id&&!S.gbp[t].includes(id)) S.gbp[t].push(id); });
+  });
+  const rec={game:S.game,winner:winTeam,blueTeam:d.blueTeam,
+    blue:slotsFor("blue","pick").map(i=>d.slots[i]).filter(Boolean),
+    red:slotsFor("red","pick").map(i=>d.slots[i]).filter(Boolean)};
+  if(archive()) rec.mode="arsip";          /* no bans recorded, by design */
+  else{
+    rec.blueBans=slotsFor("blue","ban").map(i=>d.slots[i]);
+    rec.redBans=slotsFor("red","ban").map(i=>d.slots[i]);
+  }
+  S.results.push(rec);
+  S.score[winTeam]++;
+  if(S.score[winTeam]>=target()){
+    S.over=true;
+    const n=archiveSeries();
+    toast(tName(winTeam)+" menang seri "+S.score[winTeam]+"–"+S.score[loseTeam]
+      +(n>0?" · kesimpen ke tim":n===-1?" · belum kesimpen, isi nama tim dulu":""));
+  }else{
+    S.game++;
+    const swap=S.autoSwap!==false;
+    const nextBlue=swap?otherTeam(d.blueTeam):d.blueTeam;
+    S.draft=freshDraft(nextBlue);
+    if(archive()) S.draft.target=pickSlots()[0];
+    toast(swap
+      ? "Game "+S.game+": sisi tukar — "+tName(nextBlue)+" sekarang biru."
+      : "Game "+S.game+" siap. Sisi tetap — tekan Tukar sisi kalau mau ganti.");
+  }
+  queueSave(); renderDraft();
+}
+
+function renderDraft(){ renderMatch(); renderBoard(); renderSpine(); renderGrid(); renderSuggest(); }
+function render(){ renderDraft();
+  if(view==="hero"){ renderHeroList(); renderMeters(); }
+  if(view==="rel"){ renderRel(); renderRelGrid(); }
+  if(view==="board"){ renderWhiteboard(); renderBGrid(); }
+  if(view==="team"){ renderTeams(); } }
+
+/* ---- crop ---- */
+const OUT=512;                       /* stored square size */
+let cropImg=null, cropFit=1, cropZoom=1, cropX=0, cropY=0, cropFor=null, cropDone=null;
+
+function loadImage(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), im=new Image();
+    im.onload=()=>{ URL.revokeObjectURL(url); res(im); };
+    im.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error("file bukan gambar yang kebaca")); };
+    im.src=url;
+  });
+}
+function cropClamp(){
+  const c=$("cropCanvas"), D=c.width;
+  const s=cropFit*cropZoom, w=cropImg.naturalWidth*s, h=cropImg.naturalHeight*s;
+  cropX=Math.min(0,Math.max(D-w,cropX));
+  cropY=Math.min(0,Math.max(D-h,cropY));
+}
+function cropDraw(){
+  if(!cropImg) return;
+  const c=$("cropCanvas"), ctx=c.getContext("2d"), D=c.width;
+  const s=cropFit*cropZoom;
+  cropClamp();
+  ctx.clearRect(0,0,D,D);
+  ctx.imageSmoothingQuality="high";
+  ctx.drawImage(cropImg,cropX,cropY,cropImg.naturalWidth*s,cropImg.naturalHeight*s);
+}
+function openCrop(name,img,onDone){
+  cropImg=img; cropFor=name; cropDone=onDone; cropZoom=1;
+  const box=$("cropBox"), c=$("cropCanvas");
+  const D=Math.round(Math.min(box.clientWidth||340,420));
+  c.width=D; c.height=D;
+  cropFit=D/Math.min(img.naturalWidth,img.naturalHeight);   /* smallest scale that still covers */
+  cropX=(D-img.naturalWidth*cropFit)/2;
+  cropY=(D-img.naturalHeight*cropFit)/2;
+  $("cropZoom").value="1";
+  $("cropTitle").textContent="Atur gambar "+name;
+  $("cropModal").hidden=false;
+  cropDraw();
+}
+function closeCrop(){ $("cropModal").hidden=true; cropImg=null; cropDone=null; }
+function cropToBlob(){
+  return new Promise(res=>{
+    const c=$("cropCanvas"), D=c.width, k=OUT/D;
+    const out=document.createElement("canvas"); out.width=OUT; out.height=OUT;
+    const ctx=out.getContext("2d");
+    ctx.imageSmoothingQuality="high";
+    const s=cropFit*cropZoom*k;
+    ctx.drawImage(cropImg,cropX*k,cropY*k,cropImg.naturalWidth*s,cropImg.naturalHeight*s);
+    out.toBlob(b=>res(b),"image/jpeg",0.92);
+  });
+}
+/* centre-cover square, used for bulk where cropping 120 by hand is not realistic */
+function autoSquare(img){
+  return new Promise(res=>{
+    const out=document.createElement("canvas"); out.width=OUT; out.height=OUT;
+    const ctx=out.getContext("2d"); ctx.imageSmoothingQuality="high";
+    const s=OUT/Math.min(img.naturalWidth,img.naturalHeight);
+    const w=img.naturalWidth*s, h=img.naturalHeight*s;
+    ctx.drawImage(img,(OUT-w)/2,(OUT-h)/2,w,h);
+    out.toBlob(b=>res(b),"image/jpeg",0.92);
+  });
+}
+
+let cropDrag=false, dragX=0, dragY=0;
+$("cropBox").addEventListener("pointerdown",e=>{
+  if(!cropImg) return;
+  cropDrag=true; dragX=e.clientX; dragY=e.clientY;
+  $("cropBox").setPointerCapture(e.pointerId);
+});
+$("cropBox").addEventListener("pointermove",e=>{
+  if(!cropDrag||!cropImg) return;
+  const c=$("cropCanvas"), k=c.width/$("cropBox").clientWidth;
+  cropX+=(e.clientX-dragX)*k; cropY+=(e.clientY-dragY)*k;
+  dragX=e.clientX; dragY=e.clientY; cropDraw();
+});
+["pointerup","pointercancel"].forEach(ev=>$("cropBox").addEventListener(ev,()=>{ cropDrag=false; }));
+$("cropBox").addEventListener("wheel",e=>{
+  if(!cropImg) return;
+  e.preventDefault();
+  const z=Math.min(5,Math.max(1,cropZoom*(e.deltaY<0?1.08:0.926)));
+  zoomTo(z);
+},{passive:false});
+function zoomTo(z){
+  const c=$("cropCanvas"), D=c.width;
+  const cx=D/2, cy=D/2;
+  const old=cropFit*cropZoom, next=cropFit*z;
+  cropX=cx-(cx-cropX)*(next/old);
+  cropY=cy-(cy-cropY)*(next/old);
+  cropZoom=z; $("cropZoom").value=String(z); cropDraw();
+}
+$("cropZoom").oninput=e=>zoomTo(parseFloat(e.target.value));
+$("cropCancel").onclick=closeCrop;
+$("cropOk").onclick=async()=>{
+  const fn=cropDone; const blob=await cropToBlob();
+  closeCrop();
+  if(fn&&blob) fn(blob);
+};
+$("cropModal").onclick=e=>{ if(e.target===$("cropModal")) closeCrop(); };
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("cropModal").hidden) closeCrop(); });
+
+/* ---- uploads ---- */
+async function pickAndCrop(id,file){
+  const h=byId.get(id); if(!h) return;
+  
+  let img;
+  try{ img=await loadImage(file); }
+  catch(e){ toast("Gagal baca file: "+e.message); return; }
+  openCrop(h.name,img,blob=>{ uploadFor(id,blob); });
+}
+async function uploadFor(id,file){
+  
+  const h=byId.get(id); if(!h) return;
+  try{
+    toast("Upload "+h.name+"…");
+    const res=await assets.upload(file);
+    h.img=res.id; h.edited=true; saveHero(h);
+    gridBuilt=false; renderGrid(); renderBoard();
+    if(view==="hero"){ renderHeroList(); renderMeters(); }
+    toast("Gambar "+h.name+" kesimpen.");
+  }catch(e){ toast("Upload gagal: "+(e&&e.code?e.code:"error")); }
+}
+async function bulkUpload(files){
+  
+  const list=[...files]; let ok=0; const miss=[];
+  toast("Mencocokkan "+list.length+" file…");
+  for(const f of list){
+    const key=norm(f.name.replace(/\.[^.]+$/,""));
+    const h=heroes.find(x=>norm(x.name)===key)||heroes.find(x=>norm(x.id)===key);
+    if(!h){ miss.push(f.name); continue; }
+    try{
+      const img=await loadImage(f);          /* squared from the centre — re-crop one by one after */
+      const blob=await autoSquare(img);
+      const res=await assets.upload(blob||f);
+      h.img=res.id; h.edited=true; saveHero(h); ok++;
+    }catch(e){ miss.push(f.name); }
+  }
+  gridBuilt=false; render();
+  toast(ok+" gambar kepasang"+(miss.length?" · "+miss.length+" nggak cocok":""));
+  if(miss.length) console.log("Nggak cocok sama nama hero mana pun:",miss);
+}
+function addHero(){
+  let n=1, name="Hero baru";
+  while(heroes.some(h=>h.name===name)){ n++; name="Hero baru "+n; }
+  const id=slug(name)+"-"+Date.now().toString(36).slice(-4);
+  const h={id,name,lanes:[],dmg:null,img:null,prio:false,counters:[],combo:[],custom:true};
+  heroes.push(h); heroes.sort((a,b)=>a.name.localeCompare(b.name)); byId.set(id,h);
+  saveHero(h); gridBuilt=false; hQuery=""; $("hq").value=""; hFilter="all";
+  [...$("hFilters").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v==="all")));
+  renderHeroList(); renderGrid(); renderMeters();
+  const row=$("hlist").querySelector('[data-id="'+id+'"]');
+  if(row){ row.scrollIntoView({block:"center",behavior:"smooth"});
+    const inp=row.querySelector(".hname"); if(inp){ inp.focus(); inp.select(); } }
+}
+
+
+function readBytes(file){
+  if(file.arrayBuffer) return file.arrayBuffer();
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result);
+    r.onerror=()=>rej(r.error||new Error("gagal baca file"));
+    r.readAsArrayBuffer(file);
+  });
+}
+/* ---- restore a backup zip produced by Export semua ---- */
+async function importZip(file){
+  if(typeof JSZip==="undefined"){ toast("Modul zip belum kemuat."); return; }
+  let zip;
+  try{
+    /* read the bytes first — more reliable across browsers than handing JSZip a File */
+    const buf=await readBytes(file);
+    zip=await JSZip.loadAsync(buf);
+  }
+  catch(e){ console.error("gagal buka zip",e); toast("File itu bukan ZIP yang valid."); return; }
+  const dataFile=zip.file("data.json");
+  if(!dataFile){ toast("ZIP-nya nggak ada data.json."); return; }
+  let d;
+  try{ d=JSON.parse(await dataFile.async("string")); }
+  catch(e){ toast("data.json rusak."); return; }
+
+  /* With Supabase on, images must go to its storage too — otherwise other
+     devices would sync the data but show no portraits. */
+  const toCloud = storeKind==="supabase";
+  toast(toCloud?"Upload gambar ke Supabase…":"Masukin gambar…");
+  const imgs=Object.keys(zip.files).filter(p=>/^images\//.test(p)&&!zip.files[p].dir);
+  const remap=new Map();
+  let n=0,imgFail=0;
+  for(const p of imgs){
+    const blob=await zip.files[p].async("blob");
+    const key=p.replace(/\.[^.]+$/,"");          /* images/heroes/mulan.jpg -> images/heroes/mulan */
+    const typed=new Blob([blob],{type:guessType(p)});
+    try{
+      if(toCloud){ const r=await assets.upload(typed); remap.set(key,r.id); }
+      else await putImage(key,typed);
+      n++;
+    }catch(e){ imgFail++; console.error("gagal simpan gambar",key,e); }
+    if(n%20===0) toast((toCloud?"Upload":"Masukin")+" gambar "+n+"/"+imgs.length+"…");
+  }
+  if(imgFail) toast(imgFail+" gambar gagal — cek console.");
+  const fixImg=k=>(k&&remap.has(k))?remap.get(k):k;
+
+  toast("Nulis data…");
+  if(Array.isArray(d.heroes)){
+    const ov={};
+    for(const h of d.heroes){
+      if(!h||!h.id) continue;
+      ov[h.id]={name:h.name,lanes:h.lanes||[],dmg:h.dmg??null,img:fixImg(h.img)||null,
+        prio:!!h.prio,counters:h.counters||[],combo:h.combo||[],custom:!!h.custom};
+      await store.doc("heroes/"+h.id).set(ov[h.id]);
+    }
+    buildRoster(ov); gridBuilt=false; relGridBuilt=false; bGridBuilt=false;
+  }
+  if(Array.isArray(d.teams)){
+    teams=d.teams.filter(t=>t&&t.id);
+    for(const t of teams){ t.logo=fixImg(t.logo)||null; await store.doc("teams/"+t.id).set(t); }
+  }
+  if(Array.isArray(d.boards)&&d.boards.length){
+    boards=d.boards.filter(b=>b&&b.id);
+    for(const b of boards){ b.bg=fixImg(b.bg)||null; await store.doc("boards/"+b.id).set(b); }
+    curBoard=boards[0];
+  }
+  if(d.series&&d.series.draft&&Array.isArray(d.series.draft.slots)&&d.series.draft.slots.length===SEQ.length){
+    S=d.series; if(S.mode!=="arsip") S.mode="bp";
+    if(S.autoSwap===undefined) S.autoSwap=true;
+    await store.doc("state/series").set(S);
+  }
+  lsSave(); renderTeamList(); render();
+  toast("Beres — "+n+" gambar, "+(d.heroes||[]).length+" hero, "+(d.teams||[]).length+" tim.");
+}
+function guessType(p){
+  const e=(p.split(".").pop()||"").toLowerCase();
+  return e==="png"?"image/png":e==="webp"?"image/webp":e==="gif"?"image/gif":
+         e==="svg"?"image/svg+xml":"image/jpeg";
+}
+
+/* ---- wiring ---- */
+Object.keys(FORMATS).forEach(k=>{
+  const b=document.createElement("button"); b.dataset.v=k; b.textContent=k.toUpperCase();
+  b.onclick=()=>{ if(S.draft.started&&!S.draft.done){ toast("Selesaikan atau ulang game dulu."); return; }
+    S.format=k; queueSave(); renderDraft(); };
+  $("segFormat").appendChild(b);
+});
+$("segMode").onclick=e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(S.mode===b.dataset.v) return;
+  if(S.draft.started&&!S.draft.done){ toast("Selesaikan atau ulang game dulu sebelum ganti mode."); return; }
+  S.mode=b.dataset.v;
+  S.draft=freshDraft(S.draft.blueTeam);
+  queueSave(); renderDraft();
+  toast(S.mode==="arsip"?"Mode arsip — pick aja, tanpa ban.":"Mode ban & pick.");
+};
+["pickB","pickR"].forEach(id=>{
+  $(id).onclick=e=>{ const s=e.target.closest("[data-slot]"); if(s) tapSlot(+s.dataset.slot); };
+});
+$("btnArchive").onclick=saveSeriesNow;
+$("btnSwap").onclick=swapSides;
+$("btnAuto").onclick=()=>{
+  S.autoSwap = S.autoSwap===false;
+  queueSave(); renderDraft();
+  toast(S.autoSwap?"Sisi bakal tukar sendiri tiap ganti game.":"Auto tukar mati — atur sisi sendiri pakai Tukar sisi.");
+};
+/* team names are editable in two places: the scoreboard (fixed team slots)
+   and each board header (whichever team currently sits on that side) */
+function wireName(id,keyOf){
+  const el=$(id); let t=null;
+  /* typing only updates the label; the team is resolved once on commit */
+  el.oninput=()=>{ clearTimeout(t); t=setTimeout(()=>{
+    const key=keyOf(); if(!key) return;
+    const v=el.value.trim(); if(!v) return;
+    S.teams[key]=v; queueSave();
+    if(teams.some(x=>norm(x.name)===norm(v))) commit();
+  },350); };
+  const commit=()=>{
+    const key=keyOf(); if(!key) return;
+    const v=el.value.trim();
+    if(!v){ el.value=S.teams[key]; return; }
+    if(S.link&&S.link[key]){
+      const cur=teams.find(x=>x.id===S.link[key]);
+      if(cur&&norm(cur.name)===norm(v)) return;
+    }
+    linkTeamByName(key,v);
+  };
+  el.onblur=commit;
+  el.onchange=commit;
+  el.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); el.blur(); } };
+}
+wireName("name1",()=>"t1");
+wireName("name2",()=>"t2");
+wireName("hdB",()=>teamOnSide("blue"));
+wireName("hdR",()=>teamOnSide("red"));
+$("btnStart").onclick=startGame;
+$("btnUndo").onclick=undo;
+$("btnResetGame").onclick=resetGame;
+$("btnResetSeries").onclick=resetSeries;
+$("winq").onclick=e=>{ const b=e.target.closest("button[data-side]"); if(b) recordWinner(b.dataset.side); };
+$("q").oninput=e=>{ query=e.target.value; renderGrid(); };
+$("grid").onclick=e=>{ const b=e.target.closest(".hc"); if(b) pickHero(b.dataset.id); };
+
+[["all","Semua"],["prio","★ Prioritas"],...LANES.map(l=>[l,LN[l]])].forEach(([v,t])=>{
+  const b=document.createElement("button"); b.dataset.v=v; b.textContent=t; b.setAttribute("aria-pressed",String(v==="all"));
+  b.onclick=()=>{ filter=v; [...$("filters").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===v))); renderGrid(); };
+  $("filters").appendChild(b);
+});
+[["all","Semua"],["prio","★ Prioritas"],["noimg","Belum ada gambar"],["nodmg","Belum ada damage"],...LANES.map(l=>[l,LN[l]])].forEach(([v,t])=>{
+  const b=document.createElement("button"); b.dataset.v=v; b.textContent=t; b.setAttribute("aria-pressed",String(v==="all"));
+  b.onclick=()=>{ hFilter=v; [...$("hFilters").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===v))); renderHeroList(); };
+  $("hFilters").appendChild(b);
+});
+$("hq").oninput=e=>{ hQuery=e.target.value; renderHeroList(); };
+
+const TILE={s:72,m:94,l:124};
+function setDensity(v,save){
+  const px=TILE[v]||TILE.m;
+  $("grid").style.setProperty("--tile",px+"px");
+  [...$("dens").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===v)));
+  if(save!==false){ try{ localStorage.setItem("hokdraft.tile",v); }catch(e){} }
+}
+$("dens").onclick=e=>{ const b=e.target.closest("button"); if(b) setDensity(b.dataset.v); };
+$("btnAdd").onclick=addHero;
+$("btnBulk").onclick=()=>$("fileMany").click();
+$("btnExport").onclick=()=>{ $("btnExport").disabled=true; $("btnExport").textContent="Ngemas…";
+  exportAll().finally(()=>{ $("btnExport").disabled=false; $("btnExport").textContent="Export semua"; }); };
+$("btnImport").onclick=()=>$("fileZip").click();
+$("fileZip").onchange=e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  $("btnImport").disabled=true; $("btnImport").textContent="Masukin…";
+  importZip(f).finally(()=>{ $("btnImport").disabled=false; $("btnImport").textContent="Import backup"; }); };
+$("fileOne").onchange=e=>{ const f=e.target.files[0]; if(f&&uploadTarget) pickAndCrop(uploadTarget,f); uploadTarget=null; e.target.value=""; };
+$("fileMany").onchange=e=>{ if(e.target.files.length) bulkUpload(e.target.files); e.target.value=""; };
+$("tabDraft").onclick=()=>setView("draft");
+$("tabHero").onclick=()=>setView("hero");
+$("tabRel").onclick=()=>setView("rel");
+$("tabBoard").onclick=()=>setView("board");
+$("tabTeam").onclick=()=>setView("team");
+
+/* board wiring */
+["#ff4d4d","#4d9bff","#ffd24d","#4ddb8a","#ffffff","#15181a"].forEach((c,i)=>{
+  const b=document.createElement("button"); b.type="button"; b.className="sw"; b.dataset.v=c;
+  b.style.background=c; b.setAttribute("aria-pressed",String(i===0)); b.title="Warna";
+  b.onclick=()=>{ penColor=c; penMode="pen";
+    [...$("swatches").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===c)));
+    $("toolErase").classList.remove("on"); boardCanvas().className="boardcv pen"; };
+  $("swatches").appendChild(b);
+});
+$("widths").onclick=e=>{ const b=e.target.closest("button"); if(!b) return;
+  penWidth=+b.dataset.v;
+  [...$("widths").children].forEach(x=>x.setAttribute("aria-pressed",String(x===b))); };
+$("toolErase").onclick=()=>{
+  penMode = penMode==="erase" ? "pen" : "erase";
+  $("toolErase").classList.toggle("on",penMode==="erase");
+  boardCanvas().className="boardcv "+(penMode==="erase"?"erase":"pen");
+};
+$("boardUndo").onclick=()=>{ if(!curBoard||!curBoard.strokes.length) return;
+  curBoard.strokes.pop(); drawStrokes(); saveBoard(true); };
+$("boardClear").onclick=()=>{ if(!curBoard) return;
+  curBoard.strokes=[]; curBoard.tokens=[]; drawStrokes(); renderTokens(); saveBoard(true); toast("Papan dibersihin."); };
+$("boardNew").onclick=()=>{ const b=freshBoard(); boards.push(b); curBoard=b; saveBoard(true); renderWhiteboard(); toast(b.name+" dibikin."); };
+$("boardRename").onclick=()=>{ if(!curBoard) return;
+  const sel=$("boardSel"); const inp=document.createElement("input");
+  inp.type="text"; inp.value=curBoard.name; inp.className="tcname"; inp.style.minWidth="150px";
+  sel.replaceWith(inp); inp.focus(); inp.select();
+  const done=()=>{ curBoard.name=inp.value.trim()||curBoard.name; inp.replaceWith(sel); saveBoard(true); renderBoardSel(); };
+  inp.onblur=done; inp.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); inp.blur(); } };
+};
+$("boardDel").onclick=()=>{ if(!curBoard) return;
+  const gone=curBoard;
+  boards=boards.filter(b=>b.id!==gone.id);
+  store.doc("boards/"+gone.id).delete().catch(()=>{});
+  curBoard=boards[0]||null; lsSave(); renderWhiteboard(); toast(gone.name+" dihapus."); };
+$("boardSel").onchange=e=>setBoard(e.target.value);
+$("boardBg").onclick=()=>{ if(curBoard) $("fileBg").click(); };
+$("boardFull").onclick=async()=>{
+  const w=$("boardWrap");
+  try{
+    if(document.fullscreenElement){ await document.exitFullscreen(); }
+    else if(w.requestFullscreen){ await w.requestFullscreen(); }
+    else { toast("Layar penuh nggak didukung di tampilan ini."); return; }
+    setTimeout(fitCanvas,120);
+  }catch(e){ toast("Layar penuh ditolak browser."); }
+};
+document.addEventListener("fullscreenchange",()=>{
+  $("boardFull").textContent=document.fullscreenElement?"Keluar layar penuh":"Layar penuh";
+  setTimeout(fitCanvas,120);
+});
+$("boardPng").onclick=boardToPng;
+$("bq").oninput=e=>{ bQuery=e.target.value; renderBGrid(); };
+$("bGrid").onclick=e=>{ const b=e.target.closest(".hc"); if(b) addToken(b.dataset.id); };
+$("tokSide").onclick=e=>{ const b=e.target.closest("button"); if(!b) return;
+  tokSide=b.dataset.v;
+  [...$("tokSide").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===tokSide))); };
+[["all","Semua"],["prio","★ Prioritas"],...LANES.map(l=>[l,LN[l]])].forEach(([v,t])=>{
+  const b=document.createElement("button"); b.dataset.v=v; b.textContent=t; b.setAttribute("aria-pressed",String(v==="all"));
+  b.onclick=()=>{ bFilter=v; [...$("bFilters").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===v))); renderBGrid(); };
+  $("bFilters").appendChild(b);
+});
+boardCanvas().addEventListener("pointerdown",boardDown);
+boardCanvas().addEventListener("pointermove",boardMove);
+["pointerup","pointercancel"].forEach(ev=>boardCanvas().addEventListener(ev,boardUp));
+addEventListener("resize",()=>{ if(view==="board") fitCanvas(); });
+
+$("teamNew").onclick=()=>{ const t=freshTeam(); teams.push(t); saveTeam(t); renderTeamList(); renderTeams(); toast("Tim baru dibikin."); };
+$("fileBg").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f||!curBoard) return;
+  
+  try{
+    toast("Upload map…");
+    try{ const im=await loadImage(f); if(im.naturalWidth&&im.naturalHeight) curBoard.ar=im.naturalWidth/im.naturalHeight; }catch(_){}
+    const res=await assets.upload(f);
+    curBoard.bg=res.id; saveBoard(true); renderBoardBg(); fitCanvas(); toast("Map kepasang.");
+  }catch(err){ toast("Upload gagal: "+(err&&err.code?err.code:"error")); }
+};
+$("fileLogo").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; const t=teams.find(x=>x.id===logoTarget); logoTarget=null;
+  if(!f||!t) return;
+  
+  try{ toast("Upload logo…"); const res=await assets.upload(f);
+    t.logo=res.id; saveTeam(t); renderTeams(); toast("Logo kepasang."); }
+  catch(err){ toast("Upload gagal: "+(err&&err.code?err.code:"error")); }
+};
+$("relGrid").onclick=e=>{ const b=e.target.closest(".hc"); if(b) relClick(b.dataset.id); };
+$("rq").oninput=e=>{ relQuery=e.target.value; renderRelGrid(); };
+$("armCounters").onclick=()=>{ if(relSubject) setArm("counters"); };
+$("armCombo").onclick=()=>{ if(relSubject) setArm("combo"); };
+[["all","Semua"],["prio","★ Prioritas"],...LANES.map(l=>[l,LN[l]])].forEach(([v,t])=>{
+  const b=document.createElement("button"); b.dataset.v=v; b.textContent=t; b.setAttribute("aria-pressed",String(v==="all"));
+  b.onclick=()=>{ relFilter=v; [...$("relFilters").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===v))); renderRelGrid(); };
+  $("relFilters").appendChild(b);
+});
+
+function syncThemeLabel(){
+  const r=document.documentElement, cur=r.getAttribute("data-theme");
+  const dark=cur?cur==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  $("btnTheme").textContent=dark?"Mode terang":"Mode gelap";
+  return dark;
+}
+$("btnTheme").onclick=()=>{
+  const dark=syncThemeLabel();
+  document.documentElement.setAttribute("data-theme",dark?"light":"dark");
+  try{ localStorage.setItem("hokdraft.theme",dark?"light":"dark"); }catch(e){}
+  syncThemeLabel();
+};
+document.addEventListener("keydown",e=>{
+  if(e.target.matches("input,select,textarea")) return;
+  if((e.metaKey||e.ctrlKey)&&e.key==="z"){ e.preventDefault(); undo(); }
+  else if(e.key==="/"){ e.preventDefault();
+    const box=view==="hero"?$("hq"):view==="rel"?$("rq"):view==="board"?$("bq"):$("q");
+    if(box) box.focus(); }
+});
+
+/* surface failures instead of letting handlers die silently */
+let lastErr="";
+window.addEventListener("error",e=>{
+  const m=(e&&e.message)||"error";
+  if(m===lastErr) return; lastErr=m;
+  try{ toast("Error: "+m); }catch(_){}
+});
+
+/* ---- boot ---- */
+try{ const t=localStorage.getItem("hokdraft.theme"); if(t) document.documentElement.setAttribute("data-theme",t); }catch(e){}
+syncThemeLabel();
+initStore();
+{ const b=$("storeBadge"); if(b){ b.textContent=storeNote; b.className="saved "+(storeKind==="supabase"?"":"warnstore"); } }
+try{ setDensity(localStorage.getItem("hokdraft.tile")||"m",false); }catch(e){ setDensity("m",false); }
+const cached=lsLoad();
+buildRoster(cached&&cached.ov);
+boards=(cached&&Array.isArray(cached.boards)?cached.boards:[]);
+teams=(cached&&Array.isArray(cached.teams)?cached.teams:[]);
+if(!boards.length) boards=[freshBoard("Papan 1")];
+let lastB=null; try{ lastB=localStorage.getItem("hokdraft.board"); }catch(e){}
+curBoard=boards.find(b=>b.id===lastB)||boards[0];
+const restored=cached&&migrate(cached.S);
+S=restored||freshSeries("bo5");
+if(!S.draft||!Array.isArray(S.draft.slots)||S.draft.slots.length!==SEQ.length) S.draft=freshDraft("t1");
+if(!S.draft.blueTeam) S.draft.blueTeam="t1";
+if(S.mode!=="arsip") S.mode="bp";
+if(S.autoSwap===undefined) S.autoSwap=true;
+renderTeamList();
+renderDraft();
+if(cached&&cached.S&&!restored) setTimeout(()=>toast("Model tim diperbarui — seri direset sekali."),400);
+const h0=location.hash.replace("#","");
+setView(["hero","rel","board","team"].includes(h0)?h0:"draft");
+
+(async()=>{
+  try{
+    initStore();
+    await primeImages();
+    const ov={};
+    try{
+      const snap=await store.collection("heroes").get();
+      const docs=snap&&(snap.docs||snap);
+      if(Array.isArray(docs)) docs.forEach(d=>{ const id=d.id||d.key; if(id) ov[id]=mutable(d.data?d.data():d); });
+      else if(docs&&typeof docs==="object") Object.entries(docs).forEach(([k,v])=>{ ov[k]=mutable(v); });
+    }catch(e){}
+    /* anything the user already changed this session wins over the stored copy */
+    if(Object.keys(ov).length){ buildRoster(Object.assign({},ov,overridesOut())); gridBuilt=false; relGridBuilt=false; bGridBuilt=false; }
+
+    const grab=async(coll)=>{
+      try{
+        const snap=await store.collection(coll).get();
+        const docs=snap&&(snap.docs||snap);
+        if(Array.isArray(docs)) return docs.map(x=>mutable(x.data?x.data():x)).filter(Boolean);
+        if(docs&&typeof docs==="object") return Object.values(docs).map(mutable).filter(Boolean);
+      }catch(e){}
+      return [];
+    };
+    const [sb,st]=await Promise.all([grab("boards"),grab("teams")]);
+    if(sb.length){
+      const have=new Set(boards.map(b=>b.id));
+      sb.forEach(b=>{ if(b&&b.id&&!have.has(b.id)) boards.push(b); });
+      boards=boards.filter(b=>b&&b.id&&(b.strokes||b.tokens||b.bg||sb.some(x=>x.id===b.id)));
+      if(!boards.length) boards=[freshBoard("Papan 1")];
+      boards.sort((a,b)=>(a.at||0)-(b.at||0));
+      if(!boards.find(b=>b.id===(curBoard&&curBoard.id))) curBoard=boards[0];
+    }
+    if(st.length){
+      const have=new Set(teams.map(t=>t.id));
+      st.forEach(t=>{ if(t&&t.id&&!have.has(t.id)) teams.push(t); });
+      teams.sort((a,b)=>(a.at||0)-(b.at||0));
+    }
+    renderTeamList();
+    if(!dirty){
+      try{
+        const doc=await store.doc("state/series").get();
+        const data=migrate(mutable(doc&&(doc.data?doc.data():doc)));
+        if(data&&data.draft&&Array.isArray(data.draft.slots)&&data.draft.slots.length===SEQ.length&&data.draft.blueTeam) S=data;
+      }catch(e){}
+    }
+    render();
+  }catch(e){}
+})();
+
+</script>
+</body>
+</html>
