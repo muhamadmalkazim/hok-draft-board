@@ -1158,7 +1158,12 @@ window.HOK_CONFIG = {
    claude.ai db capability, so the app code barely changed:
 
      store.doc(path).get() / .set(obj) / .delete()
-     store.collection(path).get()        -> array of docs
+     store.collection(path).get()        -> [{ id, data }]
+
+   The id is the part of the path after the prefix ("heroes/fanny" -> "fanny").
+   It has to travel with the row: a hero document stores no id of its own, so
+   a collection read that returned bare documents left the caller with no way
+   to tell which hero each one belonged to.
      assets.upload(blob)                 -> { id }
      imgSrc(key)                         -> usable <img> src
 
@@ -1258,7 +1263,10 @@ const localStore = {
         const keys = await idbKeys(DOCS);
         const vals = await idbAll(DOCS);
         const out = [];
-        keys.forEach((k, i) => { if (String(k).startsWith(pre)) out.push(vals[i]); });
+        keys.forEach((k, i) => {
+          const s = String(k);
+          if (s.startsWith(pre)) out.push({ id: s.slice(pre.length), data: vals[i] });
+        });
         return out;
       }
     };
@@ -1314,9 +1322,9 @@ function supabaseStore(cfg) {
       const pre = path.endsWith("/") ? path : path + "/";
       return {
         get: async () => {
-          const r = await fetch(rest + "?path=like." + encodeURIComponent(pre + "*") + "&select=data", { headers: H });
+          const r = await fetch(rest + "?path=like." + encodeURIComponent(pre + "*") + "&select=path,data", { headers: H });
           if (!r.ok) throw new Error("list " + r.status);
-          return (await r.json()).map(x => x.data);
+          return (await r.json()).map(x => ({ id: String(x.path).slice(pre.length), data: x.data }));
         }
       };
     }
@@ -1501,7 +1509,8 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-function heroDoc(h){ return {name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
+/* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
+function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   counters:h.counters||[],combo:h.combo||[],custom:!!h.custom}; }
 function overridesOut(){ const o={}; heroes.forEach(h=>{ if(h.custom||h.edited) o[h.id]=heroDoc(h); }); return o; }
 function lsSave(){ try{ localStorage.setItem(LS,JSON.stringify({S,ov:overridesOut(),boards,teams})); }catch(e){} }
@@ -3770,22 +3779,32 @@ setView(["hero","rel","board","team"].includes(h0)?h0:"draft");
   try{
     initStore();
     await primeImages();
+    /* The hero id lives in the row path, not inside the document — the store
+       hands it back as `id`. Reading the document alone loses it, and losing
+       it means every edit (gambar, prioritas, relasi) silently disappears on
+       any device whose localStorage cache is empty. */
     const ov={};
     try{
-      const snap=await store.collection("heroes").get();
-      const docs=snap&&(snap.docs||snap);
-      if(Array.isArray(docs)) docs.forEach(d=>{ const id=d.id||d.key; if(id) ov[id]=mutable(d.data?d.data():d); });
-      else if(docs&&typeof docs==="object") Object.entries(docs).forEach(([k,v])=>{ ov[k]=mutable(v); });
+      const rows=await store.collection("heroes").get();
+      (rows||[]).forEach(e=>{
+        const id=e&&(e.id||(e.data&&e.data.id));
+        const data=e&&(e.data!==undefined?e.data:e);
+        if(id&&data) ov[id]=mutable(data);
+      });
     }catch(e){}
     /* anything the user already changed this session wins over the stored copy */
     if(Object.keys(ov).length){ buildRoster(Object.assign({},ov,overridesOut())); gridBuilt=false; relGridBuilt=false; bGridBuilt=false; }
 
+    /* boards dan teams nyimpen id-nya sendiri di dalam dokumen; kalau nggak
+       ada, pakai id dari path biar barisnya nggak kebuang */
     const grab=async(coll)=>{
       try{
-        const snap=await store.collection(coll).get();
-        const docs=snap&&(snap.docs||snap);
-        if(Array.isArray(docs)) return docs.map(x=>mutable(x.data?x.data():x)).filter(Boolean);
-        if(docs&&typeof docs==="object") return Object.values(docs).map(mutable).filter(Boolean);
+        const rows=await store.collection(coll).get();
+        return (rows||[]).map(e=>{
+          const v=mutable(e&&(e.data!==undefined?e.data:e));
+          if(v&&!v.id&&e&&e.id) v.id=e.id;
+          return v;
+        }).filter(Boolean);
       }catch(e){}
       return [];
     };
