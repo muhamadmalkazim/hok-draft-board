@@ -237,7 +237,9 @@ html,body{height:100%}
 .hrec .as{font-size:12px;color:var(--ink-mid)}
 
 /* ---- board ---- */
-.board{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+/* dua panel harus setinggi yang paling tinggi; header sisi biru lebih
+   panjang jadi kalau nggak di-stretch kartunya kelihatan nggak rata */
+.board{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}
 @media (max-width:620px){.board{grid-template-columns:1fr}}
 .team{padding:16px 18px 18px;min-width:0}
 .team .hd{display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap}
@@ -816,6 +818,23 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .simturn.wait{opacity:.75}
 .grid.locked{opacity:.5;pointer-events:none}
 
+.simgame{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0 4px}
+.simgame b{font-size:13px;font-weight:800}
+.gbpchip{font-size:11px;font-weight:700;padding:4px 11px;border-radius:999px;
+  background:var(--track);color:var(--ink-mid);cursor:help}
+.gbpchip.b{background:var(--blue-tint);color:var(--blue-deep)}
+.gbpchip.r{background:var(--red-tint);color:var(--red-deep)}
+.roomwho{font-size:11.5px;color:var(--ink-dim)}
+.roomwho.on{color:var(--ok);font-weight:700}
+.hc.gbp .ph{filter:grayscale(1) contrast(.9);opacity:.45}
+.hc .mk.l{background:var(--lock-tint);color:var(--lock);font-size:8px;letter-spacing:.06em;
+  padding:2px 5px;border-radius:999px;font-weight:800;font-style:normal}
+/* ban ke hero yang udah kekunci GBP lawan itu ban kebuang — diabuin,
+   persis permintaan di tab Scrim */
+.hc.waste .ph{filter:grayscale(1) contrast(.9);opacity:.5}
+.hc.waste::after{content:"";position:absolute;inset:0;z-index:2;
+  background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(180,82,74,.18) 6px 12px)}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(26px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:13px 26px;border-radius:999px;font-size:14px;font-weight:600;z-index:60;box-shadow:var(--lift-lg);animation:rise .22s ease-out;max-width:86vw;text-align:center}
 @keyframes rise{from{transform:translateX(-50%) translateY(10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -985,14 +1004,17 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
       <div class="simhead">
         <div>
           <h2>Simulasi draft</h2>
-          <p>Ruang latihan bebas. Klik slot mana pun buat ganti atau kosongin, mundur sepuasnya. Nggak kecatat ke tim mana pun dan hilang begitu halaman ditutup.</p>
+          <p>Ruang latihan bebas — bisa berseri lengkap sama GBP dan tukar sisi, tapi nggak ada skor dan nggak ada yang kecatat ke tim mana pun. Hilang begitu halaman ditutup.</p>
         </div>
       </div>
+      <div class="simgame" id="simGameInfo"></div>
       <div class="acts">
+        <button class="pill" id="simNext">Game kelar → lanjut</button>
         <button class="pill" id="simUndo">Undo</button>
         <button class="pill" id="simRedo">Redo</button>
         <button class="pill" id="simSwap">Tukar sisi</button>
-        <button class="pill" id="simClear">Kosongin semua</button>
+        <button class="pill" id="simClear">Kosongin papan</button>
+        <button class="pill" id="simReset">Reset seri</button>
         <span class="sp"></span>
         <span class="saved warnstore" id="simNote">Nggak disimpan</span>
       </div>
@@ -1010,6 +1032,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
           <span class="roomcode" id="roomCodeOut"></span>
           <button class="pill sm" id="roomCopy">Salin kode</button>
           <span class="roomside" id="roomSide"></span>
+          <span class="roomwho" id="roomWho"></span>
           <span class="roomsync" id="roomSync"></span>
           <span class="sp"></span>
           <button class="pill sm danger" id="roomLeave">Keluar room</button>
@@ -3739,50 +3762,76 @@ function guessType(p){
 }
 
 /* ──────────────────────────────────────────────────────────────
-   SIMULASI — ruang latihan draft.
+   SIMULASI — ruang latihan draft, sendirian atau berdua.
 
-   Beda sama tab Scrim dalam tiga hal, dan tiganya disengaja:
-     · nggak ada seri, skor, atau GBP — cuma satu papan draft
-     · tiap slot bisa diisi, diganti, dan dikosongin kapan aja
-     · nggak nyentuh store sama sekali: nggak ke IndexedDB, nggak ke
-       Supabase, nggak ke localStorage. Tutup halaman, hilang.
+   Modelnya sama kayak Scrim dalam satu hal penting: yang nempel ke
+   TIM itu nama dan GBP, bukan sisi. Sisi tukeran tiap game, jadi
+   kalau GBP dikunci per sisi, hero yang dipake tim A di game 1
+   malah bakal ngunci tim B di game 2. Makanya dua tim di sini
+   dipanggil "a" dan "b", dan `blueIs` nentuin siapa yang lagi biru.
 
-   Bentuk SIM sengaja dibikin rata dan gampang di-JSON-in, supaya
-   nanti gampang dikirim ke orang lain kalau mode dua pemain jadi.
+   Bedanya sama Scrim:
+     · nggak ada skor dan nggak ada pemenang — ini latihan
+     · tiap slot bisa diganti dan dikosongin kapan aja (di luar room)
+     · nggak nyentuh penyimpanan sama sekali pas main sendirian
+
+   Bentuk SIM sengaja rata dan gampang di-JSON-in, karena dokumen
+   room isinya persis ini.
    ────────────────────────────────────────────────────────────── */
 let SIM=null, simQuery="", simFilter="all", simGridBuilt=false, simAt=-1;
 /* tombolnya bisa kepencet sebelum tab-nya pernah kebuka */
 function simState(){ if(!SIM) SIM=freshSim(); return SIM; }
 
 function freshSim(){
-  return {slots:SEQ.map(()=>null),blueName:"Biru",redName:"Merah",
-    cursor:0,                       /* slot yang lagi dituju */
-    past:[],future:[]};             /* undo / redo */
+  return {slots:SEQ.map(()=>null),nameA:"Tim A",nameB:"Tim B",
+    blueIs:"a",                     /* tim mana yang lagi di sisi biru */
+    game:1,
+    gbp:{a:[],b:[]},                /* hero kepake, nempel ke tim */
+    cursor:0,past:[],future:[]};
 }
+function simFreshBoard(){ SIM.slots=SEQ.map(()=>null); SIM.cursor=0; SIM.past=[]; SIM.future=[]; }
+
+/* peta sisi <-> tim buat game yang lagi jalan */
+const simTeamOn=side=>side==="blue"?SIM.blueIs:(SIM.blueIs==="a"?"b":"a");
+const simSideOf=team=>team===SIM.blueIs?"blue":"red";
+const simName=team=>team==="a"?SIM.nameA:SIM.nameB;
+function simSetName(team,v){ if(team==="a") SIM.nameA=v||"Tim A"; else SIM.nameB=v||"Tim B"; }
+
 function simSnapshot(){ return SIM.slots.slice(); }
 function simPush(){ SIM.past.push(simSnapshot()); if(SIM.past.length>80) SIM.past.shift(); SIM.future.length=0; }
-
-/* slot aktif: yang diklik user, atau slot kosong pertama menurut urutan BP */
 function simFirstEmpty(){ for(let i=0;i<SEQ.length;i++) if(!SIM.slots[i]) return i; return -1; }
 function simCursor(){
-  if(SIM.cursor>=0&&SIM.cursor<SEQ.length) return SIM.cursor;
+  if(SIM.cursor>=0&&SIM.cursor<SEQ.length&&!SIM.slots[SIM.cursor]) return SIM.cursor;
   return simFirstEmpty();
 }
 function simUsed(){ return new Set(SIM.slots.filter(Boolean)); }
+const simPicksOf=side=>slotsFor(side,"pick").map(i=>SIM.slots[i]).filter(Boolean);
 
-/* di dalam room, cuma sisi yang lagi giliran yang boleh jalan */
+/* status hero buat langkah yang lagi dituju — kembaran statusOf di Scrim */
+function simStatus(id){
+  const i=simCursor();
+  if(simUsed().has(id)) return "used";
+  if(i<0) return "free";
+  const st=SEQ[i], me=simTeamOn(sideOf(st.s)), foe=me==="a"?"b":"a";
+  if(st.p==="pick" && SIM.gbp[me].includes(id)) return "locked";
+  if(st.p==="ban"  && SIM.gbp[foe].includes(id)) return "wasteban";
+  return "free";
+}
+
 function simGuard(){
   if(!room) return true;
   if(roomMyTurn()) return true;
   const s=roomTurnSide();
-  toast("Lagi giliran "+(s==="blue"?SIM.blueName:SIM.redName)+".");
+  toast("Lagi giliran "+simName(simTeamOn(s))+".");
   return false;
 }
 function simSet(id){
   if(!simGuard()) return;
   const i=simCursor();
-  if(i<0){ toast("Semua slot udah keisi. Klik salah satu slot buat ganti."); return; }
-  if(simUsed().has(id)&&SIM.slots[i]!==id){ toast("Hero itu udah kepake di slot lain."); return; }
+  if(i<0){ toast("Draft penuh. Pencet “Game kelar” buat lanjut ke game berikutnya."); return; }
+  const st=simStatus(id);
+  if(st==="used"){ toast("Hero itu udah kepake di draft ini."); return; }
+  if(st==="locked"){ toast(byId.get(id).name+" udah dipake tim ini di game sebelumnya (GBP)."); return; }
   simPush();
   SIM.slots[i]=id;
   SIM.cursor=simFirstEmpty();
@@ -3790,8 +3839,7 @@ function simSet(id){
   simRender(); roomPush();
 }
 function simClearSlot(i){
-  /* di room, slot lawan nggak boleh diutak-atik */
-  if(room&&sideOf(SEQ[i].s)!==room.side){ toast("Itu slot lawan."); return; }
+  if(room&&simTeamOn(sideOf(SEQ[i].s))!==room.team){ toast("Itu slot lawan."); return; }
   if(!SIM.slots[i]){ if(!room) SIM.cursor=i; simRender(); return; }
   simPush(); SIM.slots[i]=null; SIM.cursor=room?simFirstEmpty():i; simRender(); roomPush();
 }
@@ -3800,15 +3848,35 @@ function simUndo(){ if(!SIM||!SIM.past.length) return;
 function simRedo(){ if(!SIM||!SIM.future.length) return;
   SIM.past.push(simSnapshot()); SIM.slots=SIM.future.pop(); SIM.cursor=simFirstEmpty(); simRender(); roomPush(); }
 
-/* glow counter/combo buat langkah yang lagi dituju — logika sama kayak Scrim,
-   tapi baca dari SIM dan nggak peduli status "started" */
+/* Game kelar: pick masuk GBP tim masing-masing, sisi tukeran, papan kosong.
+   Nggak ada skor — siapa yang menang bukan urusan ruang latihan. */
+function simNextGame(){
+  simState();
+  const bp=simPicksOf("blue"), rp=simPicksOf("red");
+  if(!bp.length&&!rp.length){ toast("Belum ada pick buat dikunci."); return; }
+  const tb=simTeamOn("blue"), tr=simTeamOn("red");
+  bp.forEach(id=>{ if(!SIM.gbp[tb].includes(id)) SIM.gbp[tb].push(id); });
+  rp.forEach(id=>{ if(!SIM.gbp[tr].includes(id)) SIM.gbp[tr].push(id); });
+  SIM.game++;
+  SIM.blueIs=SIM.blueIs==="a"?"b":"a";
+  simFreshBoard();
+  simRender(); roomPush();
+  toast("Game "+SIM.game+" — "+simName(SIM.blueIs)+" pindah ke biru.");
+}
+function simResetSeries(){
+  simState();
+  SIM.game=1; SIM.gbp={a:[],b:[]}; SIM.blueIs="a";
+  simFreshBoard(); simRender(); roomPush();
+  toast("Seri simulasi direset.");
+}
+
+/* glow counter/combo buat langkah yang lagi dituju */
 function simGlow(){
   const counter={},combo={};
   const i=simCursor();
   if(i<0) return {counter,combo,phase:null};
   const st=SEQ[i], side=sideOf(st.s), foe=side==="blue"?"red":"blue";
-  const mine=slotsFor(side,"pick").map(k=>SIM.slots[k]).filter(Boolean);
-  const theirs=slotsFor(foe,"pick").map(k=>SIM.slots[k]).filter(Boolean);
+  const mine=simPicksOf(side), theirs=simPicksOf(foe);
   const beats = st.p==="pick" ? theirs : mine;
   const withWho = st.p==="pick" ? mine : theirs;
   if(beats.length) heroes.forEach(h=>{
@@ -3833,7 +3901,7 @@ function simBuildGrid(){
 }
 function simRenderGrid(){
   if(!simGridBuilt) simBuildGrid();
-  const q=norm(simQuery), G=simGlow(), used=simUsed();
+  const q=norm(simQuery), G=simGlow();
   let shown=0;
   [...$("simGrid").children].forEach(el=>{
     if(!el.dataset||!el.dataset.id) return;
@@ -3842,12 +3910,17 @@ function simRenderGrid(){
     const passF=simFilter==="all"?true:simFilter==="prio"?!!h.prio:arr(h.lanes).includes(simFilter);
     const vis=passQ&&passF;
     el.hidden=!vis; if(vis) shown++;
-    el.classList.toggle("off",used.has(h.id));
-    el.classList.toggle("gl-prio",!!h.prio&&!used.has(h.id));
-    el.classList.toggle("gl-ctr",!!G.counter[h.id]&&!used.has(h.id));
-    el.classList.toggle("gl-cmb",!!G.combo[h.id]&&!used.has(h.id));
+    const st=simStatus(h.id);
+    const dead=st==="used"||st==="locked";
+    el.classList.toggle("off",dead);
+    el.classList.toggle("gbp",st==="locked");
+    el.classList.toggle("waste",st==="wasteban");
+    el.classList.toggle("gl-prio",!!h.prio&&!dead);
+    el.classList.toggle("gl-ctr",!!G.counter[h.id]&&!dead);
+    el.classList.toggle("gl-cmb",!!G.combo[h.id]&&!dead);
     const mk=el.querySelector(".marks"); if(mk){ mk.textContent="";
-      if(h.prio){ const s=document.createElement("i"); s.className="mk p"; s.textContent="★"; mk.appendChild(s); } }
+      if(st==="locked"){ const s=document.createElement("i"); s.className="mk l"; s.textContent="GBP"; mk.appendChild(s); }
+      else if(h.prio){ const s=document.createElement("i"); s.className="mk p"; s.textContent="★"; mk.appendChild(s); } }
   });
   $("simEmpty").hidden=shown>0;
   $("simCount").textContent=shown+" hero";
@@ -3856,17 +3929,18 @@ function simRenderGrid(){
 function simRender(){
   if(!SIM) SIM=freshSim();
   const i=simCursor();
-  if(document.activeElement!==$("simNameB")) $("simNameB").value=SIM.blueName;
-  if(document.activeElement!==$("simNameR")) $("simNameR").value=SIM.redName;
+  if(document.activeElement!==$("simNameB")) $("simNameB").value=simName(simTeamOn("blue"));
+  if(document.activeElement!==$("simNameR")) $("simNameR").value=simName(simTeamOn("red"));
 
   ["blue","red"].forEach(side=>{
     const bEl=$(side==="blue"?"simBanB":"simBanR"), pEl=$(side==="blue"?"simPickB":"simPickR");
     bEl.textContent=""; pEl.textContent="";
+    const mineInRoom=!room||simTeamOn(side)===room.team;
     slotsFor(side,"ban").forEach(k=>{
       const h=SIM.slots[k]?byId.get(SIM.slots[k]):null;
       const el=document.createElement("button"); el.type="button";
-      el.className="ban tap"+(h?" fill":"")+(k===i?" cur":"");
-      el.title=h?"Klik buat kosongin "+h.name:"Klik buat isi slot ban ini";
+      el.className="ban"+(mineInRoom?" tap":"")+(h?" fill":"")+(k===i?" cur":"");
+      el.title=h?(mineInRoom?"Klik buat kosongin "+h.name:"Ban: "+h.name):"Slot ban";
       if(h) el.appendChild(portrait(h));
       el.onclick=()=>simClearSlot(k);
       bEl.appendChild(el);
@@ -3875,8 +3949,8 @@ function simRender(){
     slotsFor(side,"pick").forEach((k,n)=>{
       const h=SIM.slots[k]?byId.get(SIM.slots[k]):null; if(h) filled++;
       const el=document.createElement("button"); el.type="button";
-      el.className="slot tap"+(h?"":" vacant")+(k===i?" live":"")+(k===simAt?" just":"");
-      el.title=h?"Klik buat kosongin "+h.name:"Klik buat isi slot ini";
+      el.className="slot"+(mineInRoom?" tap":"")+(h?"":" vacant")+(k===i?" live":"")+(k===simAt?" just":"");
+      el.title=h?(mineInRoom?"Klik buat kosongin "+h.name:h.name):"Slot pick";
       const box=document.createElement("div"); box.className="box";
       if(h){
         box.appendChild(portrait(h));
@@ -3894,34 +3968,49 @@ function simRender(){
       pEl.appendChild(el);
     });
     $(side==="blue"?"simCntB":"simCntR").textContent=filled+"/5";
-    const picks=slotsFor(side,"pick").map(k=>SIM.slots[k]).filter(Boolean).map(id=>byId.get(id)).filter(Boolean);
-    const nm=(side==="blue"?SIM.blueName:SIM.redName), sd=(side==="blue"?"Biru":"Merah");
-    compInto($(side==="blue"?"simCmpB":"simCmpR"), nm===sd?sd:nm+" · "+sd, picks);
+    const picks=simPicksOf(side).map(id=>byId.get(id)).filter(Boolean);
+    compInto($(side==="blue"?"simCmpB":"simCmpR"),
+      simName(simTeamOn(side))+" · "+(side==="blue"?"Biru":"Merah"), picks);
   });
   simAt=-1;
 
+  /* ringkasan game + GBP */
+  const gi=$("simGameInfo");
+  gi.textContent="";
+  const gl=document.createElement("b"); gl.textContent="Game "+SIM.game;
+  gi.appendChild(gl);
+  ["a","b"].forEach(t=>{
+    if(!SIM.gbp[t].length) return;
+    const w=document.createElement("span"); w.className="gbpchip "+(simSideOf(t)==="blue"?"b":"r");
+    w.textContent=simName(t)+": "+SIM.gbp[t].length+" hero kekunci";
+    w.title=SIM.gbp[t].map(id=>(byId.get(id)||{name:id}).name).join(", ");
+    gi.appendChild(w);
+  });
+
   const t=$("simTurn");
-  t.textContent="";
-  if(i<0){ t.className="simturn done"; t.textContent="Draft penuh — klik slot mana pun buat ganti."; }
+  t.textContent=""; t.classList.remove("wait");
+  if(i<0){ t.className="simturn done";
+    t.textContent="Draft penuh — pencet “Game kelar” buat lanjut, atau klik slot buat ganti."; }
   else{
     const st=SEQ[i], side=sideOf(st.s);
     t.className="simturn "+(side==="blue"?"b":"r");
-    const who=document.createElement("b");
-    who.textContent=(side==="blue"?SIM.blueName:SIM.redName);
+    const who=document.createElement("b"); who.textContent=simName(simTeamOn(side));
     const what=document.createElement("span");
     const n=SIM.slots.slice(0,i).filter((x,k)=>SEQ[k].p===st.p&&sideOf(SEQ[k].s)===side).length;
     what.textContent=" · "+(st.p==="ban"?"Ban":"Pick")+" ke-"+(n+1);
     t.append(who,what);
     if(room){
       const tag=document.createElement("em"); tag.className="turnme";
-      tag.textContent=side===room.side?" — giliran kamu":" — nunggu lawan";
+      const mine=simTeamOn(side)===room.team;
+      tag.textContent=mine?" — giliran kamu":" — nunggu lawan";
       t.appendChild(tag);
-      t.classList.toggle("wait",side!==room.side);
+      t.classList.toggle("wait",!mine);
     }
   }
   $("simUndo").disabled=!SIM.past.length;
   $("simRedo").disabled=!SIM.future.length;
-  $("simSwap").disabled=!!room;
+  $("simSwap").disabled=SIM.slots.some(Boolean);
+  $("simNext").disabled=i>=0&&!SIM.slots.some(Boolean);
   $("simGrid").classList.toggle("locked",!!room&&!roomMyTurn());
   $("simNote").textContent=room?"Papan room kesimpen sementara":"Nggak disimpan";
   simRenderGrid();
@@ -3932,24 +4021,25 @@ $("simGrid").onclick=e=>{ const b=e.target.closest(".hc"); if(b&&b.dataset.id){ 
 $("simQ").oninput=e=>{ simQuery=e.target.value; simRenderGrid(); };
 $("simUndo").onclick=()=>{ simState(); simUndo(); };
 $("simRedo").onclick=()=>{ simState(); simRedo(); };
+$("simNext").onclick=simNextGame;
+$("simReset").onclick=simResetSeries;
 $("simSwap").onclick=()=>{
   simState();
-  if(room){ toast("Di dalam room sisinya nggak bisa ditukar."); return; }
-  const b=SIM.blueName; SIM.blueName=SIM.redName; SIM.redName=b;
-  simRender(); toast("Sisi ditukar.");
+  if(SIM.slots.some(Boolean)){ toast("Kosongin papannya dulu sebelum tukar sisi."); return; }
+  SIM.blueIs=SIM.blueIs==="a"?"b":"a";
+  simRender(); roomPush(); toast("Sisi ditukar.");
 };
 $("simClear").onclick=()=>{
   simState();
   if(!SIM.slots.some(Boolean)) return;
   simPush(); SIM.slots=SEQ.map(()=>null); SIM.cursor=0; simRender(); roomPush();
-  toast("Papan simulasi dikosongin.");
+  toast("Papan dikosongin.");
 };
 ["simNameB","simNameR"].forEach(id=>{
   let t=null;
   $(id).oninput=()=>{ clearTimeout(t); t=setTimeout(()=>{
     simState();
-    const v=$(id).value.trim();
-    if(id==="simNameB") SIM.blueName=v||"Biru"; else SIM.redName=v||"Merah";
+    simSetName(simTeamOn(id==="simNameB"?"blue":"red"),$(id).value.trim());
     simRender(); roomPush();
   },350); };
 });
@@ -3965,19 +4055,14 @@ $("simClear").onclick=()=>{
 /* ──────────────────────────────────────────────────────────────
    ROOM — adu draft berdua lewat satu dokumen bersama.
 
-   Caranya sesederhana mungkin: satu baris di tabel `docs` dengan
-   path `sim/<KODE>`, dua browser sama-sama baca tiap detik dan
-   nulis tiap kali ada langkah. Nggak ada websocket, nggak ada
-   library tambahan — cuma penyimpanan yang udah dipakai.
+   Satu baris di tabel `docs` dengan path `sim/<KODE>`, dua browser
+   sama-sama baca tiap detik dan nulis tiap ada langkah. Nggak ada
+   websocket, nggak ada library tambahan.
 
    Yang perlu jujur disebut: selama room nyala, papannya MEMANG
-   kesimpen di Supabase, beda sama simulasi sendirian. Itu harga
-   biar dua orang lihat papan yang sama. Dokumennya dihapus pas
-   room ditutup, dan nggak pernah masuk ke riwayat tim mana pun.
-
-   Giliran dipegang urutan BP: cuma sisi yang lagi jalan yang bisa
-   ngeklik. Ngosongin slot dibatesin ke sisi sendiri, biar nggak
-   ada yang ngubek draft lawan.
+   kesimpen di Supabase. Itu harga biar dua orang lihat papan yang
+   sama. Dokumennya dihapus pas room ditutup, dan nggak pernah
+   masuk riwayat tim mana pun.
    ────────────────────────────────────────────────────────────── */
 const ROOM_ALPHA="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   /* tanpa O/0/I/1 */
 const ROOM_POLL=1200;
@@ -3985,14 +4070,45 @@ let room=null, roomTimer=null, roomBusy=false;
 
 function roomCode(){ let s=""; for(let i=0;i<4;i++) s+=ROOM_ALPHA[Math.floor(Math.random()*ROOM_ALPHA.length)]; return s; }
 function roomPath(c){ return "sim/"+c; }
+/* Kehadiran tamu ditaruh di dokumen terpisah, bukan di dokumen papan.
+   Dua-duanya nulis papan utuh-utuhan, jadi flag yang nebeng di situ pasti
+   ketimpa sama sisi yang lagi jalan — dan nulis ulang buat negesin bikin
+   nomor revisinya balapan sampai papannya nggak nyambung sama sekali. */
+function roomGuestPath(c){ return "sim/"+c+"-g"; }
 function roomDoc(){
-  return {code:room.code,slots:SIM.slots.slice(),blueName:SIM.blueName,redName:SIM.redName,
+  return {code:room.code,slots:SIM.slots.slice(),
+    nameA:SIM.nameA,nameB:SIM.nameB,blueIs:SIM.blueIs,game:SIM.game,
+    gbp:{a:SIM.gbp.a.slice(),b:SIM.gbp.b.slice()},
     rev:room.rev,at:Date.now()};
 }
-/* sisi yang lagi giliran menurut urutan BP; null kalau papannya penuh */
 function roomTurnSide(){ const i=simCursor(); return i<0?null:sideOf(SEQ[i].s); }
-function roomMyTurn(){ if(!room) return true; const s=roomTurnSide(); return s===null||s===room.side; }
+function roomMyTurn(){ if(!room) return true; const s=roomTurnSide(); return s===null||simTeamOn(s)===room.team; }
 
+/* Toast gampang kelewat kalau lagi ngeliatin grid hero, jadi kabar masuknya
+   lawan dikasih tiga jalan: bunyi, judul tab yang kedip, dan status menetap. */
+function roomAlert(msg){
+  toast(msg);
+  try{
+    const C=window.AudioContext||window.webkitAudioContext;
+    if(C){
+      const ctx=new C(), o=ctx.createOscillator(), g=ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type="sine"; o.frequency.value=880;
+      g.gain.setValueAtTime(0.0001,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.22,ctx.currentTime+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.34);
+      o.start(); o.stop(ctx.currentTime+0.35);
+      setTimeout(()=>{ try{ ctx.close(); }catch(e){} },700);
+    }
+  }catch(e){}
+  try{
+    if(document.hidden){
+      const old=document.title; let n=0;
+      const t=setInterval(()=>{ document.title=(n++%2)?"\u25cf "+msg:old;
+        if(n>8||!document.hidden){ clearInterval(t); document.title=old; } },700);
+    }
+  }catch(e){}
+}
 function roomSetStatus(txt,bad){
   const el=$("roomSync"); if(!el) return;
   el.textContent=txt||""; el.classList.toggle("bad",!!bad);
@@ -4002,9 +4118,10 @@ function roomRender(){
   $("roomOff").hidden=on; $("roomOn").hidden=!on;
   if(!on) return;
   $("roomCodeOut").textContent=room.code;
-  const side=room.side==="blue"?"Biru":"Merah";
-  $("roomSide").textContent="Kamu "+side;
-  $("roomSide").className="roomside "+(room.side==="blue"?"b":"r");
+  $("roomSide").textContent="Kamu "+(SIM?simName(room.team):room.team.toUpperCase());
+  $("roomSide").className="roomside "+(SIM&&simSideOf(room.team)==="blue"?"b":"r");
+  $("roomWho").textContent=room.guest?"Lawan tersambung":"Nunggu lawan masuk…";
+  $("roomWho").className="roomwho"+(room.guest?" on":"");
 }
 async function roomPush(){
   if(!room||!SIM) return;
@@ -4013,6 +4130,19 @@ async function roomPush(){
     await store.doc(roomPath(room.code)).set(roomDoc());
     roomSetStatus("tersinkron");
   }catch(e){ roomSetStatus("gagal kirim — cek koneksi",true); }
+}
+function roomAdopt(data){
+  SIM.past.push(SIM.slots.slice()); if(SIM.past.length>80) SIM.past.shift();
+  SIM.future.length=0;
+  let s=arr(data.slots).slice(0,SEQ.length).map(x=>typeof x==="string"&&x?x:null);
+  while(s.length<SEQ.length) s.push(null);
+  SIM.slots=s;
+  SIM.nameA=str(data.nameA,"Tim A"); SIM.nameB=str(data.nameB,"Tim B");
+  SIM.blueIs=data.blueIs==="b"?"b":"a";
+  SIM.game=Number(data.game)||1;
+  const g=(data.gbp&&typeof data.gbp==="object")?data.gbp:{};
+  SIM.gbp={a:arr(g.a).filter(x=>typeof x==="string"),b:arr(g.b).filter(x=>typeof x==="string")};
+  SIM.cursor=simFirstEmpty();
 }
 async function roomPull(){
   if(!room||roomBusy) return;
@@ -4023,40 +4153,38 @@ async function roomPull(){
     if(!data){ roomSetStatus("room udah ditutup",true); return; }
     if(Number(data.rev)>room.rev){
       room.rev=Number(data.rev)||0;
-      /* langkah lawan masuk undo stack lokal juga, biar bisa dimundurin bareng */
-      SIM.past.push(SIM.slots.slice()); if(SIM.past.length>80) SIM.past.shift();
-      SIM.future.length=0;
-      SIM.slots=arr(data.slots).slice(0,SEQ.length);
-      while(SIM.slots.length<SEQ.length) SIM.slots.push(null);
-      SIM.slots=SIM.slots.map(x=>typeof x==="string"&&x?x:null);
-      SIM.blueName=str(data.blueName,"Biru"); SIM.redName=str(data.redName,"Merah");
-      SIM.cursor=simFirstEmpty();
+      roomAdopt(data);
       if(view==="sim") simRender();
       roomSetStatus("tersinkron");
     }
   }catch(e){ roomSetStatus("nggak nyambung",true); }
   finally{ roomBusy=false; }
 }
+/* host nanyain dokumen kehadiran sampai tamunya muncul, terus berhenti */
+async function roomWatchGuest(){
+  if(!room||room.team!=="a"||room.guest) return;
+  try{
+    const d=await store.doc(roomGuestPath(room.code)).get();
+    if(d){ room.guest=true; roomRender(); roomAlert("Lawan udah masuk room."); }
+  }catch(e){}
+}
 function roomTick(){
   clearInterval(roomTimer); roomTimer=null;
   if(!room) return;
-  roomTimer=setInterval(()=>{ if(view==="sim") roomPull(); },ROOM_POLL);
-}
-async function roomStart(code,side,fresh){
-  room={code,side,rev:0};
-  if(fresh){
-    SIM=freshSim();
-    await roomPush();
-  }else{
-    await roomPull();
-  }
-  roomRender(); roomTick(); simRender();
+  roomTimer=setInterval(()=>{
+    if(view!=="sim") return;
+    roomPull();
+    roomWatchGuest();
+  },ROOM_POLL);
 }
 function roomStop(deleteDoc){
   const c=room&&room.code;
   clearInterval(roomTimer); roomTimer=null;
   room=null;
-  if(deleteDoc&&c) store.doc(roomPath(c)).delete().catch(()=>{});
+  if(deleteDoc&&c){
+    store.doc(roomPath(c)).delete().catch(()=>{});
+    store.doc(roomGuestPath(c)).delete().catch(()=>{});
+  }
   roomRender(); simRender();
 }
 
@@ -4074,7 +4202,10 @@ $("roomNew").onclick=async()=>{
   simState();
   $("roomNew").disabled=true;
   const c=roomCode();
-  await roomStart(c,"blue",true);
+  room={code:c,team:"a",rev:0,guest:false};
+  SIM=freshSim();
+  await roomPush();
+  roomRender(); roomTick(); simRender();
   $("roomNew").disabled=false;
   toast("Room "+c+" dibikin. Kasih kodenya ke temen lo.");
 };
@@ -4088,8 +4219,11 @@ $("roomJoin").onclick=async()=>{
     const d=await store.doc(roomPath(c)).get();
     const data=mutable(d&&(d.data?d.data():d));
     if(!data){ toast("Room "+c+" nggak ketemu."); return; }
-    await roomStart(c,"red",false);
-    toast("Masuk room "+c+" sebagai Merah.");
+    room={code:c,team:"b",rev:Number(data.rev)||0,guest:true};
+    roomAdopt(data);
+    await store.doc(roomGuestPath(c)).set({at:Date.now()});   /* kabarin yang bikin */
+    roomRender(); roomTick(); simRender();
+    toast("Masuk room "+c+" sebagai "+simName("b")+".");
   }catch(e){ toast("Gagal nyambung ke room."); }
   finally{ $("roomJoin").disabled=false; }
 };
@@ -4099,7 +4233,7 @@ $("roomCopy").onclick=()=>{
   catch(e){ toast("Kodenya: "+c); }
 };
 $("roomLeave").onclick=()=>{
-  const host=room&&room.side==="blue";
+  const host=room&&room.team==="a";
   roomStop(host);
   toast(host?"Room ditutup.":"Keluar dari room.");
 };
