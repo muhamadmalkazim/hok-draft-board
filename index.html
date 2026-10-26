@@ -781,6 +781,20 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
   .tlogo.lg{width:62px;height:62px}
 }
 
+/* ---- simulasi ---- */
+.simhead h2{margin:0 0 4px}
+.simhead p{margin:0;font-size:12px;color:var(--ink-dim);line-height:1.55;max-width:70ch}
+.simturn{display:flex;align-items:baseline;gap:2px;flex-wrap:wrap;margin-bottom:10px;
+  padding:9px 14px;border-radius:14px;background:var(--track);font-size:13px}
+.simturn b{font-weight:800}
+.simturn span{color:var(--ink-mid)}
+.simturn.b{background:var(--blue-tint);color:var(--blue-deep)}
+.simturn.r{background:var(--red-tint);color:var(--red-deep)}
+.simturn.done{color:var(--ink-dim);font-style:italic}
+.ban.tap,.slot.tap{cursor:pointer}
+.ban.tap:hover,.slot.tap:hover{filter:brightness(1.04)}
+.ban.cur{outline:2px solid var(--ink);outline-offset:2px}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(26px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:13px 26px;border-radius:999px;font-size:14px;font-weight:600;z-index:60;box-shadow:var(--lift-lg);animation:rise .22s ease-out;max-width:86vw;text-align:center}
 @keyframes rise{from{transform:translateX(-50%) translateY(10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -799,7 +813,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
     </div>
     <span class="sp"></span>
     <div class="tabs" role="tablist">
-      <button role="tab" id="tabDraft" aria-selected="true">Draft</button>
+      <button role="tab" id="tabDraft" aria-selected="true">Scrim</button>
+      <button role="tab" id="tabSim" aria-selected="false">Simulasi</button>
       <button role="tab" id="tabHero" aria-selected="false">Hero</button>
       <button role="tab" id="tabRel" aria-selected="false">Relasi</button>
       <button role="tab" id="tabBoard" aria-selected="false">Papan</button>
@@ -936,6 +951,69 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
           <i class="k" id="legK">Combo</i>
         </div>
         <div class="grid" id="grid"></div>
+      </section>
+    </div>
+   </div><!-- /panes -->
+  </div>
+
+  <!-- ============ SIMULASI ============ -->
+  <div class="view" id="viewSim" hidden>
+   <div class="panes">
+    <div class="pane left">
+    <section class="card bar">
+      <div class="simhead">
+        <div>
+          <h2>Simulasi draft</h2>
+          <p>Ruang latihan bebas. Klik slot mana pun buat ganti atau kosongin, mundur sepuasnya. Nggak kecatat ke tim mana pun dan hilang begitu halaman ditutup.</p>
+        </div>
+      </div>
+      <div class="acts">
+        <button class="pill" id="simUndo">Undo</button>
+        <button class="pill" id="simRedo">Redo</button>
+        <button class="pill" id="simSwap">Tukar sisi</button>
+        <button class="pill" id="simClear">Kosongin semua</button>
+        <span class="sp"></span>
+        <span class="saved warnstore" id="simNote">Nggak disimpan</span>
+      </div>
+    </section>
+
+    <div class="board">
+      <section class="card team b">
+        <div class="hd">
+          <input type="text" class="hdname" id="simNameB" autocomplete="off" maxlength="28" aria-label="Nama sisi biru">
+          <span class="editcue">ganti nama</span>
+          <span class="fp">Biru · First pick</span><span class="cnt" id="simCntB">0/5</span>
+        </div>
+        <div class="banrow"><span class="lbl">Ban</span><div class="bans" id="simBanB"></div></div>
+        <div class="picks" id="simPickB"></div>
+      </section>
+
+      <section class="card team r">
+        <div class="hd">
+          <input type="text" class="hdname" id="simNameR" autocomplete="off" maxlength="28" aria-label="Nama sisi merah">
+          <span class="editcue">ganti nama</span>
+          <span class="fp">Merah</span><span class="cnt" id="simCntR">0/5</span>
+        </div>
+        <div class="banrow"><span class="lbl">Ban</span><div class="bans" id="simBanR"></div></div>
+        <div class="picks" id="simPickR"></div>
+      </section>
+    </div>
+
+    <section class="card compare">
+      <div class="cmp b" id="simCmpB"></div>
+      <div class="cmp r" id="simCmpR"></div>
+    </section>
+    </div><!-- /pane left -->
+
+    <div class="pane right">
+      <section class="card flex">
+        <div class="galbar">
+          <div class="search"><input type="search" id="simQ" placeholder="Cari hero…" autocomplete="off"></div>
+          <span class="galcount" id="simCount"></span>
+          <div class="pills" id="simFilters"></div>
+        </div>
+        <div class="simturn" id="simTurn"></div>
+        <div class="grid" id="simGrid"></div>
       </section>
     </div>
    </div><!-- /panes -->
@@ -1673,11 +1751,16 @@ function renderBoard(){
 }
 
 function renderComp(team){
-  const el=$(team==="blue"?"cmpB":"cmpR"); el.textContent="";
-  const h3=document.createElement("h3");
-  h3.textContent=tName(teamOnSide(team))+" · "+(team==="blue"?"Biru":"Merah");
-  el.appendChild(h3);
   const picks=slotsFor(team,"pick").map(i=>S.draft.slots[i]).filter(Boolean).map(id=>byId.get(id)).filter(Boolean);
+  compInto($(team==="blue"?"cmpB":"cmpR"),
+    tName(teamOnSide(team))+" · "+(team==="blue"?"Biru":"Merah"), picks);
+}
+/* dipakai dua tempat: panel Scrim dan panel Simulasi */
+function compInto(el,title,picks){
+  el.textContent="";
+  const h3=document.createElement("h3");
+  h3.textContent=title;
+  el.appendChild(h3);
   const cov=new Set(); picks.forEach(h=>h.lanes.forEach(l=>cov.add(l)));
 
   const lanes=document.createElement("div"); lanes.className="lanes";
@@ -3239,16 +3322,19 @@ function setView(v){
   $("viewRel").hidden   = v!=="rel";
   $("viewBoard").hidden = v!=="board";
   $("viewTeam").hidden  = v!=="team";
+  $("viewSim").hidden   = v!=="sim";
   $("tabDraft").setAttribute("aria-selected",String(v==="draft"));
   $("tabHero").setAttribute("aria-selected",String(v==="hero"));
   $("tabRel").setAttribute("aria-selected",String(v==="rel"));
   $("tabBoard").setAttribute("aria-selected",String(v==="board"));
   $("tabTeam").setAttribute("aria-selected",String(v==="team"));
+  $("tabSim").setAttribute("aria-selected",String(v==="sim"));
   try{ if(location.hash.replace("#","")!==v) history.replaceState(null,"","#"+v); }catch(e){}
   if(v==="hero"){ renderHeroList(); renderMeters(); }
   if(v==="rel"){ relGridBuilt=false; renderRel(); renderRelGrid(); }
   if(v==="board"){ bGridBuilt=false; renderWhiteboard(); renderBGrid(); }
   if(v==="team"){ renderTeams(); }
+  if(v==="sim"){ simGridBuilt=false; simRender(); }
 }
 
 /* ---- actions ---- */
@@ -3372,7 +3458,8 @@ function render(){ renderDraft();
   if(view==="hero"){ renderHeroList(); renderMeters(); }
   if(view==="rel"){ renderRel(); renderRelGrid(); }
   if(view==="board"){ renderWhiteboard(); renderBGrid(); }
-  if(view==="team"){ renderTeams(); } }
+  if(view==="team"){ renderTeams(); }
+  if(view==="sim"){ simRenderGrid(); } }
 
 /* ---- crop ---- */
 const OUT=512;                       /* stored square size */
@@ -3611,6 +3698,208 @@ function guessType(p){
          e==="svg"?"image/svg+xml":"image/jpeg";
 }
 
+/* ──────────────────────────────────────────────────────────────
+   SIMULASI — ruang latihan draft.
+
+   Beda sama tab Scrim dalam tiga hal, dan tiganya disengaja:
+     · nggak ada seri, skor, atau GBP — cuma satu papan draft
+     · tiap slot bisa diisi, diganti, dan dikosongin kapan aja
+     · nggak nyentuh store sama sekali: nggak ke IndexedDB, nggak ke
+       Supabase, nggak ke localStorage. Tutup halaman, hilang.
+
+   Bentuk SIM sengaja dibikin rata dan gampang di-JSON-in, supaya
+   nanti gampang dikirim ke orang lain kalau mode dua pemain jadi.
+   ────────────────────────────────────────────────────────────── */
+let SIM=null, simQuery="", simFilter="all", simGridBuilt=false, simAt=-1;
+/* tombolnya bisa kepencet sebelum tab-nya pernah kebuka */
+function simState(){ if(!SIM) SIM=freshSim(); return SIM; }
+
+function freshSim(){
+  return {slots:SEQ.map(()=>null),blueName:"Biru",redName:"Merah",
+    cursor:0,                       /* slot yang lagi dituju */
+    past:[],future:[]};             /* undo / redo */
+}
+function simSnapshot(){ return SIM.slots.slice(); }
+function simPush(){ SIM.past.push(simSnapshot()); if(SIM.past.length>80) SIM.past.shift(); SIM.future.length=0; }
+
+/* slot aktif: yang diklik user, atau slot kosong pertama menurut urutan BP */
+function simFirstEmpty(){ for(let i=0;i<SEQ.length;i++) if(!SIM.slots[i]) return i; return -1; }
+function simCursor(){
+  if(SIM.cursor>=0&&SIM.cursor<SEQ.length) return SIM.cursor;
+  return simFirstEmpty();
+}
+function simUsed(){ return new Set(SIM.slots.filter(Boolean)); }
+
+function simSet(id){
+  const i=simCursor();
+  if(i<0){ toast("Semua slot udah keisi. Klik salah satu slot buat ganti."); return; }
+  if(simUsed().has(id)&&SIM.slots[i]!==id){ toast("Hero itu udah kepake di slot lain."); return; }
+  simPush();
+  SIM.slots[i]=id;
+  SIM.cursor=simFirstEmpty();
+  simAt=i;
+  simRender();
+}
+function simClearSlot(i){
+  if(!SIM.slots[i]){ SIM.cursor=i; simRender(); return; }
+  simPush(); SIM.slots[i]=null; SIM.cursor=i; simRender();
+}
+function simUndo(){ if(!SIM||!SIM.past.length) return;
+  SIM.future.push(simSnapshot()); SIM.slots=SIM.past.pop(); SIM.cursor=simFirstEmpty(); simRender(); }
+function simRedo(){ if(!SIM||!SIM.future.length) return;
+  SIM.past.push(simSnapshot()); SIM.slots=SIM.future.pop(); SIM.cursor=simFirstEmpty(); simRender(); }
+
+/* glow counter/combo buat langkah yang lagi dituju — logika sama kayak Scrim,
+   tapi baca dari SIM dan nggak peduli status "started" */
+function simGlow(){
+  const counter={},combo={};
+  const i=simCursor();
+  if(i<0) return {counter,combo,phase:null};
+  const st=SEQ[i], side=sideOf(st.s), foe=side==="blue"?"red":"blue";
+  const mine=slotsFor(side,"pick").map(k=>SIM.slots[k]).filter(Boolean);
+  const theirs=slotsFor(foe,"pick").map(k=>SIM.slots[k]).filter(Boolean);
+  const beats = st.p==="pick" ? theirs : mine;
+  const withWho = st.p==="pick" ? mine : theirs;
+  if(beats.length) heroes.forEach(h=>{
+    const n=arr(h.counters).filter(c=>beats.includes(c)).length; if(n) counter[h.id]=n; });
+  withWho.forEach(p=>{ const h=byId.get(p); if(!h) return;
+    arr(h.combo).forEach(c=>{ combo[c]=(combo[c]||0)+1; }); });
+  return {counter,combo,phase:st.p};
+}
+
+function simBuildGrid(){
+  const g=$("simGrid"); g.textContent="";
+  heroes.slice().sort((a,b)=>(b.prio?1:0)-(a.prio?1:0)||a.name.localeCompare(b.name)).forEach(h=>{
+    const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
+    b.appendChild(portrait(h));
+    const mk=document.createElement("span"); mk.className="marks"; b.appendChild(mk);
+    const n=document.createElement("span"); n.className="cn"; n.textContent=h.name; b.appendChild(n);
+    g.appendChild(b);
+  });
+  const e=document.createElement("p"); e.className="gridempty"; e.id="simEmpty"; e.hidden=true;
+  e.textContent="Nggak ada hero yang cocok.";
+  g.appendChild(e); simGridBuilt=true;
+}
+function simRenderGrid(){
+  if(!simGridBuilt) simBuildGrid();
+  const q=norm(simQuery), G=simGlow(), used=simUsed();
+  let shown=0;
+  [...$("simGrid").children].forEach(el=>{
+    if(!el.dataset||!el.dataset.id) return;
+    const h=byId.get(el.dataset.id); if(!h){ el.hidden=true; return; }
+    const passQ=!q||norm(h.name).includes(q);
+    const passF=simFilter==="all"?true:simFilter==="prio"?!!h.prio:arr(h.lanes).includes(simFilter);
+    const vis=passQ&&passF;
+    el.hidden=!vis; if(vis) shown++;
+    el.classList.toggle("off",used.has(h.id));
+    el.classList.toggle("gl-prio",!!h.prio&&!used.has(h.id));
+    el.classList.toggle("gl-ctr",!!G.counter[h.id]&&!used.has(h.id));
+    el.classList.toggle("gl-cmb",!!G.combo[h.id]&&!used.has(h.id));
+    const mk=el.querySelector(".marks"); if(mk){ mk.textContent="";
+      if(h.prio){ const s=document.createElement("i"); s.className="mk p"; s.textContent="★"; mk.appendChild(s); } }
+  });
+  $("simEmpty").hidden=shown>0;
+  $("simCount").textContent=shown+" hero";
+}
+
+function simRender(){
+  if(!SIM) SIM=freshSim();
+  const i=simCursor();
+  if(document.activeElement!==$("simNameB")) $("simNameB").value=SIM.blueName;
+  if(document.activeElement!==$("simNameR")) $("simNameR").value=SIM.redName;
+
+  ["blue","red"].forEach(side=>{
+    const bEl=$(side==="blue"?"simBanB":"simBanR"), pEl=$(side==="blue"?"simPickB":"simPickR");
+    bEl.textContent=""; pEl.textContent="";
+    slotsFor(side,"ban").forEach(k=>{
+      const h=SIM.slots[k]?byId.get(SIM.slots[k]):null;
+      const el=document.createElement("button"); el.type="button";
+      el.className="ban tap"+(h?" fill":"")+(k===i?" cur":"");
+      el.title=h?"Klik buat kosongin "+h.name:"Klik buat isi slot ban ini";
+      if(h) el.appendChild(portrait(h));
+      el.onclick=()=>simClearSlot(k);
+      bEl.appendChild(el);
+    });
+    let filled=0;
+    slotsFor(side,"pick").forEach((k,n)=>{
+      const h=SIM.slots[k]?byId.get(SIM.slots[k]):null; if(h) filled++;
+      const el=document.createElement("button"); el.type="button";
+      el.className="slot tap"+(h?"":" vacant")+(k===i?" live":"")+(k===simAt?" just":"");
+      el.title=h?"Klik buat kosongin "+h.name:"Klik buat isi slot ini";
+      const box=document.createElement("div"); box.className="box";
+      if(h){
+        box.appendChild(portrait(h));
+        if(h.dmg){ const t=document.createElement("span"); t.className="dt";
+          t.textContent=h.dmg==="magic"?"MAG":"FIS"; box.appendChild(t); }
+      }else{
+        const ph=document.createElement("div"); ph.className="ph";
+        const ix=document.createElement("span"); ix.className="idx"; ix.textContent=n+1;
+        ph.appendChild(ix); box.appendChild(ph);
+      }
+      el.appendChild(box);
+      const nm=document.createElement("span"); nm.className="nm";
+      nm.textContent=h?h.name:"—"; el.appendChild(nm);
+      el.onclick=()=>simClearSlot(k);
+      pEl.appendChild(el);
+    });
+    $(side==="blue"?"simCntB":"simCntR").textContent=filled+"/5";
+    const picks=slotsFor(side,"pick").map(k=>SIM.slots[k]).filter(Boolean).map(id=>byId.get(id)).filter(Boolean);
+    const nm=(side==="blue"?SIM.blueName:SIM.redName), sd=(side==="blue"?"Biru":"Merah");
+    compInto($(side==="blue"?"simCmpB":"simCmpR"), nm===sd?sd:nm+" · "+sd, picks);
+  });
+  simAt=-1;
+
+  const t=$("simTurn");
+  t.textContent="";
+  if(i<0){ t.className="simturn done"; t.textContent="Draft penuh — klik slot mana pun buat ganti."; }
+  else{
+    const st=SEQ[i], side=sideOf(st.s);
+    t.className="simturn "+(side==="blue"?"b":"r");
+    const who=document.createElement("b");
+    who.textContent=(side==="blue"?SIM.blueName:SIM.redName);
+    const what=document.createElement("span");
+    const n=SIM.slots.slice(0,i).filter((x,k)=>SEQ[k].p===st.p&&sideOf(SEQ[k].s)===side).length;
+    what.textContent=" · "+(st.p==="ban"?"Ban":"Pick")+" ke-"+(n+1);
+    t.append(who,what);
+  }
+  $("simUndo").disabled=!SIM.past.length;
+  $("simRedo").disabled=!SIM.future.length;
+  simRenderGrid();
+}
+
+/* ---- wiring simulasi ---- */
+$("simGrid").onclick=e=>{ const b=e.target.closest(".hc"); if(b&&b.dataset.id){ simState(); simSet(b.dataset.id); } };
+$("simQ").oninput=e=>{ simQuery=e.target.value; simRenderGrid(); };
+$("simUndo").onclick=()=>{ simState(); simUndo(); };
+$("simRedo").onclick=()=>{ simState(); simRedo(); };
+$("simSwap").onclick=()=>{
+  simState();
+  const b=SIM.blueName; SIM.blueName=SIM.redName; SIM.redName=b;
+  simRender(); toast("Sisi ditukar.");
+};
+$("simClear").onclick=()=>{
+  simState();
+  if(!SIM.slots.some(Boolean)) return;
+  simPush(); SIM.slots=SEQ.map(()=>null); SIM.cursor=0; simRender(); toast("Papan simulasi dikosongin.");
+};
+["simNameB","simNameR"].forEach(id=>{
+  let t=null;
+  $(id).oninput=()=>{ clearTimeout(t); t=setTimeout(()=>{
+    simState();
+    const v=$(id).value.trim();
+    if(id==="simNameB") SIM.blueName=v||"Biru"; else SIM.redName=v||"Merah";
+    simRender();
+  },350); };
+});
+[["all","Semua"],["prio","★ Prioritas"],...LANES.map(l=>[l,LN[l]])].forEach(([v,t])=>{
+  const b=document.createElement("button"); b.className="pill sm"; b.dataset.v=v; b.textContent=t;
+  b.setAttribute("aria-pressed",String(v==="all"));
+  b.onclick=()=>{ simFilter=v;
+    [...$("simFilters").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===v)));
+    simRenderGrid(); };
+  $("simFilters").appendChild(b);
+});
+
 /* ---- wiring ---- */
 Object.keys(FORMATS).forEach(k=>{
   const b=document.createElement("button"); b.dataset.v=k; b.textContent=k.toUpperCase();
@@ -3705,6 +3994,7 @@ $("fileZip").onchange=e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) 
 $("fileOne").onchange=e=>{ const f=e.target.files[0]; if(f&&uploadTarget) pickAndCrop(uploadTarget,f); uploadTarget=null; e.target.value=""; };
 $("fileMany").onchange=e=>{ if(e.target.files.length) bulkUpload(e.target.files); e.target.value=""; };
 $("tabDraft").onclick=()=>setView("draft");
+$("tabSim").onclick=()=>setView("sim");
 $("tabHero").onclick=()=>setView("hero");
 $("tabRel").onclick=()=>setView("rel");
 $("tabBoard").onclick=()=>setView("board");
@@ -3858,7 +4148,7 @@ renderTeamList();
 renderDraft();
 if(cached&&cached.S&&!restored) setTimeout(()=>toast("Model tim diperbarui — seri direset sekali."),400);
 const h0=location.hash.replace("#","");
-setView(["hero","rel","board","team"].includes(h0)?h0:"draft");
+setView(["hero","rel","board","team","sim"].includes(h0)?h0:"draft");
 
 (async()=>{
   try{
