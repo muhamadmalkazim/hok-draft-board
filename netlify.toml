@@ -1,0 +1,13 @@
+# Seluruh aplikasi ada di satu file HTML. Kalau file itu ke-cache browser,
+# HP yang udah lama kebuka bakal tetep jalan di build lama — dan buat fitur
+# room, dua versi yang beda bikin papannya diem-diem nggak nyambung.
+# Jadi HTML-nya selalu dicek ulang ke server tiap kali dibuka.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"

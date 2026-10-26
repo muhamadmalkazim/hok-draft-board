@@ -820,8 +820,11 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 
 .simgame{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0 4px}
 .simgame b{font-size:13px;font-weight:800}
-.gbpchip{font-size:11px;font-weight:700;padding:4px 11px;border-radius:999px;
-  background:var(--track);color:var(--ink-mid);cursor:help}
+.gbpchip{font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;
+  background:var(--track);color:var(--ink-mid);transition:box-shadow .14s}
+.gbpchip.open{box-shadow:0 0 0 2px currentColor}
+.gbplist{display:flex;gap:5px;flex-wrap:wrap;flex:1 1 100%;margin-top:4px}
+.gbplist .gth{width:34px;height:34px;border-radius:11px}
 .gbpchip.b{background:var(--blue-tint);color:var(--blue-deep)}
 .gbpchip.r{background:var(--red-tint);color:var(--red-deep)}
 .roomwho{font-size:11.5px;color:var(--ink-dim)}
@@ -829,6 +832,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .hc.gbp .ph{filter:grayscale(1) contrast(.9);opacity:.45}
 .hc .mk.l{background:var(--lock-tint);color:var(--lock);font-size:8px;letter-spacing:.06em;
   padding:2px 5px;border-radius:999px;font-weight:800;font-style:normal}
+.hc .mk.w{background:var(--red-tint);color:var(--red-deep);font-size:7.5px;letter-spacing:.04em;
+  padding:2px 5px;border-radius:999px;font-weight:800;font-style:normal;white-space:nowrap}
 /* ban ke hero yang udah kekunci GBP lawan itu ban kebuang — diabuin,
    persis permintaan di tab Scrim */
 .hc.waste .ph{filter:grayscale(1) contrast(.9);opacity:.5}
@@ -1710,6 +1715,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
+const APP_VER="26beb397";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   counters:h.counters||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -3799,7 +3805,7 @@ function guessType(p){
    Bentuk SIM sengaja rata dan gampang di-JSON-in, karena dokumen
    room isinya persis ini.
    ────────────────────────────────────────────────────────────── */
-let SIM=null, simQuery="", simFilter="all", simGridBuilt=false, simAt=-1;
+let SIM=null, simQuery="", simFilter="all", simGridBuilt=false, simAt=-1, simGbpOpen=null;
 /* tombolnya bisa kepencet sebelum tab-nya pernah kebuka */
 function simState(){ if(!SIM) SIM=freshSim(); return SIM; }
 
@@ -3873,6 +3879,7 @@ function simRedo(){ if(!SIM||!SIM.future.length) return;
    Nggak ada skor — siapa yang menang bukan urusan ruang latihan. */
 function simNextGame(){
   simState();
+  if(room&&room.team!=="a"){ toast("Yang bikin room yang majuin game."); return; }
   const bp=simPicksOf("blue"), rp=simPicksOf("red");
   if(!bp.length&&!rp.length){ toast("Belum ada pick buat dikunci."); return; }
   const tb=simTeamOn("blue"), tr=simTeamOn("red");
@@ -3886,6 +3893,7 @@ function simNextGame(){
 }
 function simResetSeries(){
   simState();
+  if(room&&room.team!=="a"){ toast("Yang bikin room yang reset seri."); return; }
   SIM.game=1; SIM.gbp={a:[],b:[]}; SIM.blueIs="a";
   simFreshBoard(); simRender(); roomPush();
   toast("Seri simulasi direset.");
@@ -3939,6 +3947,9 @@ function simRenderGrid(){
     el.classList.toggle("gl-prio",!!h.prio&&!dead);
     el.classList.toggle("gl-ctr",!!G.counter[h.id]&&!dead);
     el.classList.toggle("gl-cmb",!!G.combo[h.id]&&!dead);
+    el.title = st==="locked" ? h.name+" \u2014 udah dipake tim ini, nggak bisa dipick lagi"
+             : st==="wasteban" ? h.name+" \u2014 lawan udah kena GBP di hero ini, nggak perlu diban"
+             : st==="used" ? h.name+" \u2014 udah kepake di draft ini" : h.name;
     const mk=el.querySelector(".marks"); if(mk){ mk.textContent="";
       if(st==="locked"){ const s=document.createElement("i"); s.className="mk l"; s.textContent="GBP"; mk.appendChild(s); }
       else if(h.prio){ const s=document.createElement("i"); s.className="mk p"; s.textContent="★"; mk.appendChild(s); } }
@@ -3995,18 +4006,28 @@ function simRender(){
   });
   simAt=-1;
 
-  /* ringkasan game + GBP */
+  /* ringkasan game + GBP. Chip-nya bisa diklik: di HP, tooltip nggak kebuka. */
   const gi=$("simGameInfo");
   gi.textContent="";
   const gl=document.createElement("b"); gl.textContent="Game "+SIM.game;
   gi.appendChild(gl);
   ["a","b"].forEach(t=>{
     if(!SIM.gbp[t].length) return;
-    const w=document.createElement("span"); w.className="gbpchip "+(simSideOf(t)==="blue"?"b":"r");
-    w.textContent=simName(t)+": "+SIM.gbp[t].length+" hero kekunci";
-    w.title=SIM.gbp[t].map(id=>(byId.get(id)||{name:id}).name).join(", ");
+    const w=document.createElement("button"); w.type="button";
+    w.className="gbpchip "+(simSideOf(t)==="blue"?"b":"r")+(simGbpOpen===t?" open":"");
+    w.textContent=simName(t)+" \u00b7 "+SIM.gbp[t].length+" kekunci";
+    w.onclick=()=>{ simGbpOpen=simGbpOpen===t?null:t; simRender(); };
     gi.appendChild(w);
   });
+  if(simGbpOpen&&SIM.gbp[simGbpOpen]&&SIM.gbp[simGbpOpen].length){
+    const box=document.createElement("div"); box.className="gbplist";
+    SIM.gbp[simGbpOpen].forEach(id=>{
+      const hh=byId.get(id)||{name:id,img:null};
+      const c=document.createElement("div"); c.className="gth"; c.title=hh.name;
+      c.appendChild(portrait(hh)); box.appendChild(c);
+    });
+    gi.appendChild(box);
+  }
 
   const t=$("simTurn");
   t.textContent=""; t.classList.remove("wait");
@@ -4030,8 +4051,11 @@ function simRender(){
   }
   $("simUndo").disabled=!SIM.past.length;
   $("simRedo").disabled=!SIM.future.length;
-  $("simSwap").disabled=SIM.slots.some(Boolean);
-  $("simNext").disabled=i>=0&&!SIM.slots.some(Boolean);
+  const guest=!!room&&room.team!=="a";
+  $("simSwap").disabled=guest||SIM.slots.some(Boolean);
+  $("simNext").disabled=guest||(i>=0&&!SIM.slots.some(Boolean));
+  $("simClear").disabled=guest;
+  $("simReset").disabled=guest;
   $("simGrid").classList.toggle("locked",!!room&&!roomMyTurn());
   $("simNote").textContent=room?"Papan room kesimpen sementara":"Nggak disimpan";
   simRenderGrid();
@@ -4046,12 +4070,14 @@ $("simNext").onclick=simNextGame;
 $("simReset").onclick=simResetSeries;
 $("simSwap").onclick=()=>{
   simState();
+  if(room&&room.team!=="a"){ toast("Yang bikin room yang atur sisi."); return; }
   if(SIM.slots.some(Boolean)){ toast("Kosongin papannya dulu sebelum tukar sisi."); return; }
   SIM.blueIs=SIM.blueIs==="a"?"b":"a";
   simRender(); roomPush(); toast("Sisi ditukar.");
 };
 $("simClear").onclick=()=>{
   simState();
+  if(room&&room.team!=="a"){ toast("Yang bikin room yang ngosongin papan."); return; }
   if(!SIM.slots.some(Boolean)) return;
   simPush(); SIM.slots=SEQ.map(()=>null); SIM.cursor=0; simRender(); roomPush();
   toast("Papan dikosongin.");
@@ -4088,6 +4114,22 @@ $("simClear").onclick=()=>{
 const ROOM_ALPHA="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   /* tanpa O/0/I/1 */
 const ROOM_POLL=1200;
 let room=null, roomTimer=null, roomBusy=false;
+/* Tiap browser punya tanda tangan sendiri. Dulu sinkronnya pakai nomor
+   revisi yang dinaikin masing-masing sisi — begitu dua sisi sama-sama
+   nulis (ganti nama, undo, lanjut game), nomornya ketemu di angka yang
+   sama dan dua-duanya berhenti nerima update lawan. Hasilnya papan beda
+   diem-diem: satu ngira dia biru, satunya ngira hal yang sama, dan grid
+   dua-duanya kekunci. Sekarang yang dipakai: siapa penulis terakhir plus
+   isi papannya. Kalau yang nulis bukan aku dan isinya beda, ya ambil. */
+const ROOM_ME="w"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+/* Dua HP bisa kebuka di versi aplikasi yang beda kalau salah satunya masih
+   nge-cache build lama. Bentuk dokumen room-nya beda, dan akibatnya papan
+   diem-diem nggak nyambung. Lebih baik ditolak terang-terangan. */
+let roomVerWarned=false;
+function roomSig(d){
+  return JSON.stringify([d.slots,d.blueIs,d.game,d.nameA,d.nameB,
+    (d.gbp&&d.gbp.a)||[],(d.gbp&&d.gbp.b)||[]]);
+}
 
 function roomCode(){ let s=""; for(let i=0;i<4;i++) s+=ROOM_ALPHA[Math.floor(Math.random()*ROOM_ALPHA.length)]; return s; }
 function roomPath(c){ return "sim/"+c; }
@@ -4100,7 +4142,7 @@ function roomDoc(){
   return {code:room.code,slots:SIM.slots.slice(),
     nameA:SIM.nameA,nameB:SIM.nameB,blueIs:SIM.blueIs,game:SIM.game,
     gbp:{a:SIM.gbp.a.slice(),b:SIM.gbp.b.slice()},
-    rev:room.rev,at:Date.now()};
+    ver:APP_VER,by:ROOM_ME,at:Date.now()};
 }
 function roomTurnSide(){ const i=simCursor(); return i<0?null:sideOf(SEQ[i].s); }
 function roomMyTurn(){ if(!room) return true; const s=roomTurnSide(); return s===null||simTeamOn(s)===room.team; }
@@ -4172,8 +4214,15 @@ async function roomPull(){
     const d=await store.doc(roomPath(room.code)).get();
     const data=mutable(d&&(d.data?d.data():d));
     if(!data){ roomSetStatus("room udah ditutup",true); return; }
-    if(Number(data.rev)>room.rev){
-      room.rev=Number(data.rev)||0;
+    if(data.ver&&data.ver!==APP_VER){
+      roomSetStatus("versi aplikasi beda \u2014 suruh dia refresh",true);
+      if(!roomVerWarned){ roomVerWarned=true;
+        roomAlert("Versi aplikasi kalian beda. Yang satunya perlu tutup tab terus buka lagi."); }
+      return;
+    }
+    const sig=roomSig(data);
+    if(data.by!==ROOM_ME&&sig!==room.sig){
+      room.sig=sig;
       roomAdopt(data);
       if(view==="sim") simRender();
       roomSetStatus("tersinkron");
@@ -4223,7 +4272,7 @@ $("roomNew").onclick=async()=>{
   simState();
   $("roomNew").disabled=true;
   const c=roomCode();
-  room={code:c,team:"a",rev:0,guest:false};
+  room={code:c,team:"a",sig:"",guest:false};
   SIM=freshSim();
   await roomPush();
   roomRender(); roomTick(); simRender();
@@ -4240,7 +4289,11 @@ $("roomJoin").onclick=async()=>{
     const d=await store.doc(roomPath(c)).get();
     const data=mutable(d&&(d.data?d.data():d));
     if(!data){ toast("Room "+c+" nggak ketemu."); return; }
-    room={code:c,team:"b",rev:Number(data.rev)||0,guest:true};
+    if(data.ver&&data.ver!==APP_VER){
+      toast("Versi aplikasi beda. Tutup tab ini terus buka lagi biar kebaru.");
+      return;
+    }
+    room={code:c,team:"b",sig:roomSig(data),guest:true};
     roomAdopt(data);
     await store.doc(roomGuestPath(c)).set({at:Date.now()});   /* kabarin yang bikin */
     roomRender(); roomTick(); simRender();
