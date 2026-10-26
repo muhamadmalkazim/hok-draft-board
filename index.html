@@ -795,6 +795,27 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .ban.tap:hover,.slot.tap:hover{filter:brightness(1.04)}
 .ban.cur{outline:2px solid var(--ink);outline-offset:2px}
 
+/* ---- room: adu draft berdua ---- */
+.roombar{margin-top:12px;padding-top:12px;border-top:1px solid var(--sunk)}
+.roomoff,.roomon{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.roomoff .lbl{flex:0 0 auto}
+.roomor{font-size:11.5px;color:var(--ink-dim)}
+#roomCode{width:104px;background:var(--track);box-shadow:none;border-radius:999px;padding:7px 15px;
+  font-size:13px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;text-align:center}
+.roomhint{font-size:11.5px;color:var(--ink-dim);flex:1 1 100%}
+.roomon .sp{flex:1 1 auto}
+.roomcode{font-size:17px;font-weight:800;letter-spacing:.26em;padding:5px 4px 5px 12px;
+  background:var(--track);border-radius:12px}
+.roomside{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;
+  padding:5px 11px;border-radius:999px;background:var(--track);color:var(--ink-mid)}
+.roomside.b{background:var(--blue-tint);color:var(--blue-deep)}
+.roomside.r{background:var(--red-tint);color:var(--red-deep)}
+.roomsync{font-size:11.5px;color:var(--ink-dim)}
+.roomsync.bad{color:var(--red)}
+.simturn .turnme{font-style:normal;font-weight:700;margin-left:4px}
+.simturn.wait{opacity:.75}
+.grid.locked{opacity:.5;pointer-events:none}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(26px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:13px 26px;border-radius:999px;font-size:14px;font-weight:600;z-index:60;box-shadow:var(--lift-lg);animation:rise .22s ease-out;max-width:86vw;text-align:center}
 @keyframes rise{from{transform:translateX(-50%) translateY(10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -974,6 +995,25 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
         <button class="pill" id="simClear">Kosongin semua</button>
         <span class="sp"></span>
         <span class="saved warnstore" id="simNote">Nggak disimpan</span>
+      </div>
+      <div class="roombar" id="roomBar">
+        <div class="roomoff" id="roomOff">
+          <span class="lbl">Main berdua</span>
+          <button class="pill sm" id="roomNew">Bikin room</button>
+          <span class="roomor">atau</span>
+          <input type="text" id="roomCode" placeholder="KODE" maxlength="5" autocomplete="off"
+                 aria-label="Kode room" spellcheck="false">
+          <button class="pill sm" id="roomJoin">Masuk</button>
+          <span class="roomhint" id="roomHint"></span>
+        </div>
+        <div class="roomon" id="roomOn" hidden>
+          <span class="roomcode" id="roomCodeOut"></span>
+          <button class="pill sm" id="roomCopy">Salin kode</button>
+          <span class="roomside" id="roomSide"></span>
+          <span class="roomsync" id="roomSync"></span>
+          <span class="sp"></span>
+          <button class="pill sm danger" id="roomLeave">Keluar room</button>
+        </div>
       </div>
     </section>
 
@@ -3730,7 +3770,16 @@ function simCursor(){
 }
 function simUsed(){ return new Set(SIM.slots.filter(Boolean)); }
 
+/* di dalam room, cuma sisi yang lagi giliran yang boleh jalan */
+function simGuard(){
+  if(!room) return true;
+  if(roomMyTurn()) return true;
+  const s=roomTurnSide();
+  toast("Lagi giliran "+(s==="blue"?SIM.blueName:SIM.redName)+".");
+  return false;
+}
 function simSet(id){
+  if(!simGuard()) return;
   const i=simCursor();
   if(i<0){ toast("Semua slot udah keisi. Klik salah satu slot buat ganti."); return; }
   if(simUsed().has(id)&&SIM.slots[i]!==id){ toast("Hero itu udah kepake di slot lain."); return; }
@@ -3738,16 +3787,18 @@ function simSet(id){
   SIM.slots[i]=id;
   SIM.cursor=simFirstEmpty();
   simAt=i;
-  simRender();
+  simRender(); roomPush();
 }
 function simClearSlot(i){
-  if(!SIM.slots[i]){ SIM.cursor=i; simRender(); return; }
-  simPush(); SIM.slots[i]=null; SIM.cursor=i; simRender();
+  /* di room, slot lawan nggak boleh diutak-atik */
+  if(room&&sideOf(SEQ[i].s)!==room.side){ toast("Itu slot lawan."); return; }
+  if(!SIM.slots[i]){ if(!room) SIM.cursor=i; simRender(); return; }
+  simPush(); SIM.slots[i]=null; SIM.cursor=room?simFirstEmpty():i; simRender(); roomPush();
 }
 function simUndo(){ if(!SIM||!SIM.past.length) return;
-  SIM.future.push(simSnapshot()); SIM.slots=SIM.past.pop(); SIM.cursor=simFirstEmpty(); simRender(); }
+  SIM.future.push(simSnapshot()); SIM.slots=SIM.past.pop(); SIM.cursor=simFirstEmpty(); simRender(); roomPush(); }
 function simRedo(){ if(!SIM||!SIM.future.length) return;
-  SIM.past.push(simSnapshot()); SIM.slots=SIM.future.pop(); SIM.cursor=simFirstEmpty(); simRender(); }
+  SIM.past.push(simSnapshot()); SIM.slots=SIM.future.pop(); SIM.cursor=simFirstEmpty(); simRender(); roomPush(); }
 
 /* glow counter/combo buat langkah yang lagi dituju — logika sama kayak Scrim,
    tapi baca dari SIM dan nggak peduli status "started" */
@@ -3861,9 +3912,18 @@ function simRender(){
     const n=SIM.slots.slice(0,i).filter((x,k)=>SEQ[k].p===st.p&&sideOf(SEQ[k].s)===side).length;
     what.textContent=" · "+(st.p==="ban"?"Ban":"Pick")+" ke-"+(n+1);
     t.append(who,what);
+    if(room){
+      const tag=document.createElement("em"); tag.className="turnme";
+      tag.textContent=side===room.side?" — giliran kamu":" — nunggu lawan";
+      t.appendChild(tag);
+      t.classList.toggle("wait",side!==room.side);
+    }
   }
   $("simUndo").disabled=!SIM.past.length;
   $("simRedo").disabled=!SIM.future.length;
+  $("simSwap").disabled=!!room;
+  $("simGrid").classList.toggle("locked",!!room&&!roomMyTurn());
+  $("simNote").textContent=room?"Papan room kesimpen sementara":"Nggak disimpan";
   simRenderGrid();
 }
 
@@ -3874,13 +3934,15 @@ $("simUndo").onclick=()=>{ simState(); simUndo(); };
 $("simRedo").onclick=()=>{ simState(); simRedo(); };
 $("simSwap").onclick=()=>{
   simState();
+  if(room){ toast("Di dalam room sisinya nggak bisa ditukar."); return; }
   const b=SIM.blueName; SIM.blueName=SIM.redName; SIM.redName=b;
   simRender(); toast("Sisi ditukar.");
 };
 $("simClear").onclick=()=>{
   simState();
   if(!SIM.slots.some(Boolean)) return;
-  simPush(); SIM.slots=SEQ.map(()=>null); SIM.cursor=0; simRender(); toast("Papan simulasi dikosongin.");
+  simPush(); SIM.slots=SEQ.map(()=>null); SIM.cursor=0; simRender(); roomPush();
+  toast("Papan simulasi dikosongin.");
 };
 ["simNameB","simNameR"].forEach(id=>{
   let t=null;
@@ -3888,7 +3950,7 @@ $("simClear").onclick=()=>{
     simState();
     const v=$(id).value.trim();
     if(id==="simNameB") SIM.blueName=v||"Biru"; else SIM.redName=v||"Merah";
-    simRender();
+    simRender(); roomPush();
   },350); };
 });
 [["all","Semua"],["prio","★ Prioritas"],...LANES.map(l=>[l,LN[l]])].forEach(([v,t])=>{
@@ -3899,6 +3961,149 @@ $("simClear").onclick=()=>{
     simRenderGrid(); };
   $("simFilters").appendChild(b);
 });
+
+/* ──────────────────────────────────────────────────────────────
+   ROOM — adu draft berdua lewat satu dokumen bersama.
+
+   Caranya sesederhana mungkin: satu baris di tabel `docs` dengan
+   path `sim/<KODE>`, dua browser sama-sama baca tiap detik dan
+   nulis tiap kali ada langkah. Nggak ada websocket, nggak ada
+   library tambahan — cuma penyimpanan yang udah dipakai.
+
+   Yang perlu jujur disebut: selama room nyala, papannya MEMANG
+   kesimpen di Supabase, beda sama simulasi sendirian. Itu harga
+   biar dua orang lihat papan yang sama. Dokumennya dihapus pas
+   room ditutup, dan nggak pernah masuk ke riwayat tim mana pun.
+
+   Giliran dipegang urutan BP: cuma sisi yang lagi jalan yang bisa
+   ngeklik. Ngosongin slot dibatesin ke sisi sendiri, biar nggak
+   ada yang ngubek draft lawan.
+   ────────────────────────────────────────────────────────────── */
+const ROOM_ALPHA="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   /* tanpa O/0/I/1 */
+const ROOM_POLL=1200;
+let room=null, roomTimer=null, roomBusy=false;
+
+function roomCode(){ let s=""; for(let i=0;i<4;i++) s+=ROOM_ALPHA[Math.floor(Math.random()*ROOM_ALPHA.length)]; return s; }
+function roomPath(c){ return "sim/"+c; }
+function roomDoc(){
+  return {code:room.code,slots:SIM.slots.slice(),blueName:SIM.blueName,redName:SIM.redName,
+    rev:room.rev,at:Date.now()};
+}
+/* sisi yang lagi giliran menurut urutan BP; null kalau papannya penuh */
+function roomTurnSide(){ const i=simCursor(); return i<0?null:sideOf(SEQ[i].s); }
+function roomMyTurn(){ if(!room) return true; const s=roomTurnSide(); return s===null||s===room.side; }
+
+function roomSetStatus(txt,bad){
+  const el=$("roomSync"); if(!el) return;
+  el.textContent=txt||""; el.classList.toggle("bad",!!bad);
+}
+function roomRender(){
+  const on=!!room;
+  $("roomOff").hidden=on; $("roomOn").hidden=!on;
+  if(!on) return;
+  $("roomCodeOut").textContent=room.code;
+  const side=room.side==="blue"?"Biru":"Merah";
+  $("roomSide").textContent="Kamu "+side;
+  $("roomSide").className="roomside "+(room.side==="blue"?"b":"r");
+}
+async function roomPush(){
+  if(!room||!SIM) return;
+  room.rev++;
+  try{
+    await store.doc(roomPath(room.code)).set(roomDoc());
+    roomSetStatus("tersinkron");
+  }catch(e){ roomSetStatus("gagal kirim — cek koneksi",true); }
+}
+async function roomPull(){
+  if(!room||roomBusy) return;
+  roomBusy=true;
+  try{
+    const d=await store.doc(roomPath(room.code)).get();
+    const data=mutable(d&&(d.data?d.data():d));
+    if(!data){ roomSetStatus("room udah ditutup",true); return; }
+    if(Number(data.rev)>room.rev){
+      room.rev=Number(data.rev)||0;
+      /* langkah lawan masuk undo stack lokal juga, biar bisa dimundurin bareng */
+      SIM.past.push(SIM.slots.slice()); if(SIM.past.length>80) SIM.past.shift();
+      SIM.future.length=0;
+      SIM.slots=arr(data.slots).slice(0,SEQ.length);
+      while(SIM.slots.length<SEQ.length) SIM.slots.push(null);
+      SIM.slots=SIM.slots.map(x=>typeof x==="string"&&x?x:null);
+      SIM.blueName=str(data.blueName,"Biru"); SIM.redName=str(data.redName,"Merah");
+      SIM.cursor=simFirstEmpty();
+      if(view==="sim") simRender();
+      roomSetStatus("tersinkron");
+    }
+  }catch(e){ roomSetStatus("nggak nyambung",true); }
+  finally{ roomBusy=false; }
+}
+function roomTick(){
+  clearInterval(roomTimer); roomTimer=null;
+  if(!room) return;
+  roomTimer=setInterval(()=>{ if(view==="sim") roomPull(); },ROOM_POLL);
+}
+async function roomStart(code,side,fresh){
+  room={code,side,rev:0};
+  if(fresh){
+    SIM=freshSim();
+    await roomPush();
+  }else{
+    await roomPull();
+  }
+  roomRender(); roomTick(); simRender();
+}
+function roomStop(deleteDoc){
+  const c=room&&room.code;
+  clearInterval(roomTimer); roomTimer=null;
+  room=null;
+  if(deleteDoc&&c) store.doc(roomPath(c)).delete().catch(()=>{});
+  roomRender(); simRender();
+}
+
+/* ---- wiring room ---- */
+function roomReady(){
+  if(storeKind!=="supabase"){
+    $("roomHint").textContent="Butuh sync Supabase — sekarang datanya cuma di browser ini.";
+    $("roomNew").disabled=true; $("roomJoin").disabled=true; $("roomCode").disabled=true;
+    return false;
+  }
+  return true;
+}
+$("roomNew").onclick=async()=>{
+  if(!roomReady()) return;
+  simState();
+  $("roomNew").disabled=true;
+  const c=roomCode();
+  await roomStart(c,"blue",true);
+  $("roomNew").disabled=false;
+  toast("Room "+c+" dibikin. Kasih kodenya ke temen lo.");
+};
+$("roomJoin").onclick=async()=>{
+  if(!roomReady()) return;
+  const c=($("roomCode").value||"").trim().toUpperCase();
+  if(c.length<4){ toast("Kodenya 4 huruf."); return; }
+  simState();
+  $("roomJoin").disabled=true;
+  try{
+    const d=await store.doc(roomPath(c)).get();
+    const data=mutable(d&&(d.data?d.data():d));
+    if(!data){ toast("Room "+c+" nggak ketemu."); return; }
+    await roomStart(c,"red",false);
+    toast("Masuk room "+c+" sebagai Merah.");
+  }catch(e){ toast("Gagal nyambung ke room."); }
+  finally{ $("roomJoin").disabled=false; }
+};
+$("roomCopy").onclick=()=>{
+  const c=room&&room.code; if(!c) return;
+  try{ navigator.clipboard.writeText(c); toast("Kode "+c+" disalin."); }
+  catch(e){ toast("Kodenya: "+c); }
+};
+$("roomLeave").onclick=()=>{
+  const host=room&&room.side==="blue";
+  roomStop(host);
+  toast(host?"Room ditutup.":"Keluar dari room.");
+};
+$("roomCode").oninput=e=>{ e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,""); };
 
 /* ---- wiring ---- */
 Object.keys(FORMATS).forEach(k=>{
