@@ -859,6 +859,16 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .teammenu .sep{height:1px;background:var(--sunk);margin:5px 2px}
 .teammenu .none{font-size:12px;color:var(--ink-dim);padding:8px 9px;font-style:italic}
 
+/* ---- kabar versi baru ---- */
+.newver{position:fixed;left:50%;transform:translateX(-50%);top:14px;z-index:70;
+  display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;
+  background:var(--ink);color:var(--panel);box-shadow:var(--lift-lg);font-size:13px;font-weight:600;
+  max-width:92vw}
+.newver .pill{background:var(--panel);color:var(--ink);box-shadow:none}
+.newver .pill:hover{transform:none}
+.newver .pill.ghost{background:transparent;color:var(--panel);opacity:.7}
+.newver .pill.ghost:hover{background:rgba(255,255,255,.14);color:var(--panel)}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(26px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:13px 26px;border-radius:999px;font-size:14px;font-weight:600;z-index:60;box-shadow:var(--lift-lg);animation:rise .22s ease-out;max-width:86vw;text-align:center}
 @keyframes rise{from{transform:translateX(-50%) translateY(10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -869,6 +879,11 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 </style>
 </head>
 <body>
+<div class="newver" id="newVer" hidden>
+  <span>Versi baru udah siap.</span>
+  <button class="pill sm" id="newVerGo">Muat ulang</button>
+  <button class="pill sm ghost" id="newVerNo">Nanti</button>
+</div>
 <div class="wrap">
   <header class="mast">
     <div>
@@ -967,7 +982,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
       <section class="card team b">
         <div class="hd">
           <input type="text" class="hdname" id="hdB" autocomplete="off" maxlength="28" aria-label="Tim sisi biru" title="Pilih tim terdaftar atau tulis nama baru">
-          <button type="button" class="pickteam" id="pickB" aria-label="Pilih tim terdaftar" title="Pilih tim terdaftar">▾</button>
+          <button type="button" class="pickteam" id="pickTeamB" aria-label="Pilih tim terdaftar" title="Pilih tim terdaftar">▾</button>
           <span class="editcue">ganti nama</span>
           <span class="fp">Biru · First pick</span><span class="cnt" id="cntB">0/5</span>
         </div>
@@ -978,7 +993,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
       <section class="card team r">
         <div class="hd">
           <input type="text" class="hdname" id="hdR" autocomplete="off" maxlength="28" aria-label="Tim sisi merah" title="Pilih tim terdaftar atau tulis nama baru">
-          <button type="button" class="pickteam" id="pickR" aria-label="Pilih tim terdaftar" title="Pilih tim terdaftar">▾</button>
+          <button type="button" class="pickteam" id="pickTeamR" aria-label="Pilih tim terdaftar" title="Pilih tim terdaftar">▾</button>
           <span class="editcue">ganti nama</span>
           <span class="fp">Merah</span><span class="cnt" id="cntR">0/5</span>
         </div>
@@ -1715,7 +1730,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="26beb397";   /* diisi pas build */
+const APP_VER="eee70a61";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   counters:h.counters||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -3828,11 +3843,12 @@ function simSnapshot(){ return SIM.slots.slice(); }
 function simPush(){ SIM.past.push(simSnapshot()); if(SIM.past.length>80) SIM.past.shift(); SIM.future.length=0; }
 function simFirstEmpty(){ for(let i=0;i<SEQ.length;i++) if(!SIM.slots[i]) return i; return -1; }
 function simCursor(){
+  if(!SIM) return -1;                 /* tombol filter bisa kepencet sebelum tab-nya kebuka */
   if(SIM.cursor>=0&&SIM.cursor<SEQ.length&&!SIM.slots[SIM.cursor]) return SIM.cursor;
   return simFirstEmpty();
 }
-function simUsed(){ return new Set(SIM.slots.filter(Boolean)); }
-const simPicksOf=side=>slotsFor(side,"pick").map(i=>SIM.slots[i]).filter(Boolean);
+function simUsed(){ return new Set(SIM?SIM.slots.filter(Boolean):[]); }
+const simPicksOf=side=>SIM?slotsFor(side,"pick").map(i=>SIM.slots[i]).filter(Boolean):[];
 
 /* status hero buat langkah yang lagi dituju — kembaran statusOf di Scrim */
 function simStatus(id){
@@ -3929,6 +3945,7 @@ function simBuildGrid(){
   g.appendChild(e); simGridBuilt=true;
 }
 function simRenderGrid(){
+  simState();
   if(!simGridBuilt) simBuildGrid();
   const q=norm(simQuery), G=simGlow();
   let shown=0;
@@ -4217,7 +4234,8 @@ async function roomPull(){
     if(data.ver&&data.ver!==APP_VER){
       roomSetStatus("versi aplikasi beda \u2014 suruh dia refresh",true);
       if(!roomVerWarned){ roomVerWarned=true;
-        roomAlert("Versi aplikasi kalian beda. Yang satunya perlu tutup tab terus buka lagi."); }
+        roomAlert("Versi aplikasi kalian beda \u2014 lagi dicek yang terbaru."); }
+      verCheck();
       return;
     }
     const sig=roomSig(data);
@@ -4290,7 +4308,8 @@ $("roomJoin").onclick=async()=>{
     const data=mutable(d&&(d.data?d.data():d));
     if(!data){ toast("Room "+c+" nggak ketemu."); return; }
     if(data.ver&&data.ver!==APP_VER){
-      toast("Versi aplikasi beda. Tutup tab ini terus buka lagi biar kebaru.");
+      toast("Versi aplikasi beda \u2014 lagi dimuat ulang ke yang terbaru.");
+      verCheck();
       return;
     }
     room={code:c,team:"b",sig:roomSig(data),guest:true};
@@ -4312,6 +4331,65 @@ $("roomLeave").onclick=()=>{
   toast(host?"Room ditutup.":"Keluar dari room.");
 };
 $("roomCode").oninput=e=>{ e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,""); };
+
+/* ──────────────────────────────────────────────────────────────
+   Kabar versi baru.
+
+   Seluruh aplikasi ada di satu file HTML, jadi ngecek versinya cukup
+   ngambil halamannya sendiri tanpa cache terus baca cap versi di
+   dalemnya. Dicek pas tab dibuka lagi, tiap beberapa menit, dan pas
+   room nemu lawan yang versinya beda.
+
+   Muat ulang otomatis cuma dilakukan kalau nggak ada yang bakal
+   ilang: papan simulasi sendirian itu di memori doang, dan orang
+   yang lagi ngetik nggak pantes diputus di tengah. Selain itu,
+   tombolnya yang muncul, biar dia yang mutusin kapan.
+   ────────────────────────────────────────────────────────────── */
+const VER_POLL=240000;                       /* 4 menit */
+let verLatest=null, verTimer=null, verBusy=false;
+
+function verSafeToReload(){
+  const el=document.activeElement;
+  if(el&&/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return false;
+  if(room) return true;                      /* papan room ada di server */
+  if(SIM&&SIM.slots.some(Boolean)) return false;
+  return true;
+}
+function verShowBanner(){
+  const b=$("newVer"); if(!b) return;
+  b.hidden=false;
+}
+function verApply(){
+  try{ sessionStorage.setItem("hokdraft.reload",verLatest||""); }catch(e){}
+  location.reload();
+}
+async function verCheck(){
+  if(verBusy||verLatest) return;   /* udah ketemu versi baru, tinggal nunggu dimuat */
+  verBusy=true;
+  try{
+    const r=await fetch(location.pathname+"?v="+Date.now(),{cache:"no-store"});
+    if(!r.ok) return;
+    const t=await r.text();
+    const m=/APP_VER="([a-z0-9]+)"/i.exec(t);
+    if(!m||m[1]===APP_VER) return;
+    /* sekali gagal muat ulang ke versi yang sama, berhenti maksa */
+    let tried=null; try{ tried=sessionStorage.getItem("hokdraft.reload"); }catch(e){}
+    verLatest=m[1];
+    if(tried===verLatest){ verShowBanner(); return; }
+    if(verSafeToReload()){ toast("Versi baru — memuat ulang…"); setTimeout(verApply,650); }
+    else verShowBanner();
+  }catch(e){}
+  finally{ verBusy=false; }
+}
+function verStart(){
+  clearInterval(verTimer);
+  verTimer=setInterval(verCheck,VER_POLL);
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) verCheck(); });
+  window.addEventListener("focus",verCheck);
+  setTimeout(verCheck,8000);
+}
+$("newVerGo").onclick=verApply;
+$("newVerNo").onclick=()=>{ $("newVer").hidden=true; };
 
 /* ---- wiring ---- */
 Object.keys(FORMATS).forEach(k=>{
@@ -4417,8 +4495,8 @@ function openTeamMenu(btn,slotKey,inputId){
     document.addEventListener("keydown",onTeamMenuKey,true);
   },0);
 }
-$("pickB").onclick=()=>openTeamMenu($("pickB"),teamOnSide("blue"),"hdB");
-$("pickR").onclick=()=>openTeamMenu($("pickR"),teamOnSide("red"),"hdR");
+$("pickTeamB").onclick=()=>openTeamMenu($("pickTeamB"),teamOnSide("blue"),"hdB");
+$("pickTeamR").onclick=()=>openTeamMenu($("pickTeamR"),teamOnSide("red"),"hdR");
 window.addEventListener("resize",closeTeamMenu);
 
 wireName("hdB",()=>teamOnSide("blue"));
@@ -4615,6 +4693,7 @@ if(S.autoSwap===undefined) S.autoSwap=true;
 renderTeamList();
 renderDraft();
 if(cached&&cached.S&&!restored) setTimeout(()=>toast("Model tim diperbarui — seri direset sekali."),400);
+verStart();
 const h0=location.hash.replace("#","");
 setView(["hero","rel","board","team","sim"].includes(h0)?h0:"draft");
 
