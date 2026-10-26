@@ -242,20 +242,24 @@ html,body{height:100%}
 .board{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}
 @media (max-width:620px){.board{grid-template-columns:1fr}}
 .team{padding:16px 18px 18px;min-width:0}
-.team .hd{display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+/* Dulu header ini satu baris yang boleh wrap, dan karena "BIRU · FIRST PICK"
+   lebih panjang dari "MERAH", sisi biru doang yang turun baris — slot
+   draft-nya ikut melorot sebelah. Sekarang dua baris buat dua-duanya:
+   nama di atas, chip sisi dan hitungan di bawah. Strukturnya sama persis
+   di kiri dan kanan, jadi nggak mungkin miring, dan nama tim nggak perlu
+   dipotong biar muat. */
+.team .hd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 9px;
+  align-items:center;margin-bottom:14px}
 .team .hd h2{font-size:17px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hdname{font-size:17px;font-weight:800;letter-spacing:-.02em;background:transparent;box-shadow:none;
-  padding:5px 11px;border-radius:12px;width:auto;flex:1 1 auto;min-width:0;max-width:100%;
-  transition:background .16s,box-shadow .16s;cursor:text}
+  padding:5px 11px;border-radius:12px;width:100%;min-width:0;max-width:100%;
+  text-overflow:ellipsis;transition:background .16s,box-shadow .16s;cursor:text}
 .hdname:hover{background:var(--track)}
 .hdname:focus{background:var(--raised);box-shadow:0 0 0 2px currentColor}
 .team.b .hdname{color:var(--blue-deep)} .team.r .hdname{color:var(--red-deep)}
-.editcue{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--ink-dim);
-  opacity:0;transition:opacity .16s;white-space:nowrap}
-.team .hd:hover .editcue{opacity:1}
 .team.b .hd h2{color:var(--blue-deep)} .team.r .hd h2{color:var(--red-deep)}
-.team .hd .fp{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:5px 11px;border-radius:999px;color:var(--ink-mid);background:var(--track)}
-.team .hd .cnt{margin-left:auto;font-size:13px;color:var(--ink-dim);font-variant-numeric:tabular-nums;font-weight:600}
+.team .hd .fp{grid-column:1;justify-self:start;white-space:nowrap;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:5px 11px;border-radius:999px;color:var(--ink-mid);background:var(--track)}
+.team .hd .cnt{grid-column:2;white-space:nowrap;font-size:13px;color:var(--ink-dim);font-variant-numeric:tabular-nums;font-weight:600}
 .banrow{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .bans{display:flex;gap:6px}
 .ban{width:36px;height:36px;border-radius:12px;background:var(--sunk);position:relative;overflow:hidden;flex:0 0 auto}
@@ -842,7 +846,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 
 /* datalist nggak nunjukin seluruh pilihan sampai field-nya dikosongin,
    jadi daftar tim dikasih tombolnya sendiri */
-.pickteam{width:26px;height:26px;border-radius:9px;flex:0 0 auto;font-size:11px;line-height:1;
+.pickteam{grid-column:2;width:26px;height:26px;border-radius:9px;flex:0 0 auto;font-size:11px;line-height:1;
   color:var(--ink-dim);background:var(--track);transition:background .14s,color .14s}
 .pickteam:hover{background:var(--sunk);color:var(--ink)}
 .teammenu{position:absolute;z-index:40;min-width:208px;max-height:300px;overflow-y:auto;
@@ -983,7 +987,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
         <div class="hd">
           <input type="text" class="hdname" id="hdB" autocomplete="off" maxlength="28" aria-label="Tim sisi biru" title="Pilih tim terdaftar atau tulis nama baru">
           <button type="button" class="pickteam" id="pickTeamB" aria-label="Pilih tim terdaftar" title="Pilih tim terdaftar">▾</button>
-          <span class="editcue">ganti nama</span>
           <span class="fp">Biru · First pick</span><span class="cnt" id="cntB">0/5</span>
         </div>
         <div class="banrow"><span class="lbl">Ban</span><div class="bans" id="banB"></div></div>
@@ -994,7 +997,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
         <div class="hd">
           <input type="text" class="hdname" id="hdR" autocomplete="off" maxlength="28" aria-label="Tim sisi merah" title="Pilih tim terdaftar atau tulis nama baru">
           <button type="button" class="pickteam" id="pickTeamR" aria-label="Pilih tim terdaftar" title="Pilih tim terdaftar">▾</button>
-          <span class="editcue">ganti nama</span>
           <span class="fp">Merah</span><span class="cnt" id="cntR">0/5</span>
         </div>
         <div class="banrow"><span class="lbl">Ban</span><div class="bans" id="banR"></div></div>
@@ -1085,7 +1087,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
       <section class="card team b">
         <div class="hd">
           <input type="text" class="hdname" id="simNameB" autocomplete="off" maxlength="28" aria-label="Nama sisi biru">
-          <span class="editcue">ganti nama</span>
           <span class="fp">Biru · First pick</span><span class="cnt" id="simCntB">0/5</span>
         </div>
         <div class="banrow"><span class="lbl">Ban</span><div class="bans" id="simBanB"></div></div>
@@ -1095,7 +1096,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
       <section class="card team r">
         <div class="hd">
           <input type="text" class="hdname" id="simNameR" autocomplete="off" maxlength="28" aria-label="Nama sisi merah">
-          <span class="editcue">ganti nama</span>
           <span class="fp">Merah</span><span class="cnt" id="simCntR">0/5</span>
         </div>
         <div class="banrow"><span class="lbl">Ban</span><div class="bans" id="simBanR"></div></div>
@@ -1731,7 +1731,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="a1c960b4";   /* diisi pas build */
+const APP_VER="9cfce347";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -3210,7 +3210,12 @@ function saveSeriesNow(){
   toast(S.results.length+" game kesimpen ke "+(n===2?"dua tim":"tim yang kepasang")+".");
 }
 
-/* ---- relations: counters are directional, combos are mutual ---- */
+/* ---- relasi ----
+   Yang dicatat user: "hero ini LEMAH lawan siapa" (h.weak). Arah ini dipilih
+   karena jauh lebih gampang diisi — orang hafal hero andalannya susah lawan
+   apa, bukan daftar panjang hero yang dia kalahin. Daftar "kuat lawan"
+   dihitung balik otomatis, jadi nggak ada yang diketik dua kali.
+   Combo tetap dua arah. */
 let relSubject=null, relArm="subject", relQuery="", relFilter="all", relGridBuilt=false;
 
 function relAvatar(h,cls){
