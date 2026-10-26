@@ -2366,8 +2366,12 @@ let teams=[], logoTarget=null, teamOpen=null;
       on two games is noise; a coaching tool that dresses that up as
       a finding is worse than one that stays quiet.
    ────────────────────────────────────────────────────────────── */
+/* Riwayat yang ditulis versi lama aplikasi ini nyimpen `games` sebagai angka,
+   bukan daftar. Sekali ada satu baris kayak gitu, seluruh tab Tim ikut mati.
+   Jadi tiap field yang diharapkan daftar dipaksa jadi daftar dulu. */
+function arr(v){ return Array.isArray(v)?v:[]; }
 function teamStats(t){
-  const hist=(t.history||[]).slice().sort((a,b)=>(a.at||0)-(b.at||0));
+  const hist=arr(t.history).slice().sort((a,b)=>(a.at||0)-(b.at||0));
   const S={
     series:{w:0,l:0}, games:{w:0,l:0},
     side:{blue:{g:0,w:0},red:{g:0,w:0}},
@@ -2389,12 +2393,12 @@ function teamStats(t){
     const f=S.foes.get(key)||{sw:0,sl:0,gw:0,gl:0,lastAt:0};
     h.win?f.sw++:f.sl++; if(h.at>f.lastAt) f.lastAt=h.at;
     S.foes.set(key,f);
-    (h.games||[]).forEach(g=>{
+    arr(h.games).forEach(g=>{
       g.win?S.games.w++:S.games.l++;
       g.win?f.gw++:f.gl++;
       S.form.push({win:!!g.win,vs:key,at:h.at,g:g.g});
       const sd=S.side[g.side]; if(sd){ sd.g++; if(g.win) sd.w++; }
-      (g.mine||[]).forEach(id=>{
+      arr(g.mine).forEach(id=>{
         bump(S.mine,id,g.win); S.picks++;
         const hh=byId.get(id); if(!hh) return;
         const lane=(hh.lanes&&hh.lanes[0])||null;
@@ -2402,9 +2406,9 @@ function teamStats(t){
                   e.p++; if(g.win) e.w++; m.set(id,e); S.roles.set(lane,m); }
         if(hh.dmg){ const d=S.dmg.get(hh.dmg)||{p:0,w:0}; d.p++; if(g.win) d.w++; S.dmg.set(hh.dmg,d); }
       });
-      (g.theirs||[]).forEach(id=>bump(S.theirs,id,g.win));
-      if(g.myBans&&g.myBans.length){ S.hasBans=true; g.myBans.forEach(id=>bump(S.myBans,id,g.win)); }
-      if(g.theirBans&&g.theirBans.length){ S.hasBans=true; g.theirBans.forEach(id=>bump(S.theirBans,id,g.win)); }
+      arr(g.theirs).forEach(id=>bump(S.theirs,id,g.win));
+      if(arr(g.myBans).length){ S.hasBans=true; arr(g.myBans).forEach(id=>bump(S.myBans,id,g.win)); }
+      if(arr(g.theirBans).length){ S.hasBans=true; arr(g.theirBans).forEach(id=>bump(S.theirBans,id,g.win)); }
     });
   });
   return S;
@@ -2459,7 +2463,7 @@ function renderTeamGrid(){
     lg.appendChild(portrait({name:t.name,img:t.logo}));
     const mid=document.createElement("span"); mid.className="tcmid";
     const nm=document.createElement("b"); nm.className="tcn"; nm.textContent=t.name;
-    const np=(t.players||[]).filter(p=>p.name&&p.name.trim()).length;
+    const np=arr(t.players).filter(p=>p&&p.name&&p.name.trim()).length;
     const mt=document.createElement("span"); mt.className="tmeta";
     const mt2=document.createElement("span"); mt2.className="tmeta dim";
     if(s.series.w+s.series.l){
@@ -2633,7 +2637,7 @@ function renderTeamDetail(t){
   /* -- roster -- */
   const rs2=dsec("Roster","Nama dan role yang kamu isi sendiri. Role dipake buat nyambungin pick per lane di bawah.");
   const pl=document.createElement("div"); pl.className="plist";
-  (t.players||[]).forEach((p,i)=>{
+  arr(t.players).forEach((p,i)=>{
     const r=document.createElement("div"); r.className="prow";
     const pn=document.createElement("input"); pn.type="text"; pn.value=p.name||""; pn.placeholder="Nama pemain";
     pn.setAttribute("aria-label","Nama pemain");
@@ -2646,16 +2650,16 @@ function renderTeamDetail(t){
     rl.onchange=()=>{ p.role=rl.value||null; saveTeam(t); renderTeams(); };
     const x=document.createElement("button"); x.type="button"; x.className="px"; x.textContent="×";
     x.title="Hapus pemain";
-    x.onclick=()=>{ t.players.splice(i,1); saveTeam(t); renderTeams(); };
+    x.onclick=()=>{ t.players=arr(t.players); t.players.splice(i,1); saveTeam(t); renderTeams(); };
     r.append(pn,rl,x); pl.appendChild(r);
   });
-  if(!(t.players||[]).length){
+  if(!arr(t.players).length){
     const e=document.createElement("p"); e.className="gnone"; e.textContent="Belum ada pemain.";
     pl.appendChild(e);
   }
   rs2.appendChild(pl);
   const ap=document.createElement("button"); ap.className="pill sm"; ap.textContent="+ Pemain";
-  ap.onclick=()=>{ t.players=t.players||[]; if(t.players.length>=8){ toast("Maks 8 pemain."); return; }
+  ap.onclick=()=>{ t.players=arr(t.players); if(t.players.length>=8){ toast("Maks 8 pemain."); return; }
     t.players.push({name:"",role:null}); saveTeam(t); renderTeams(); };
   const apw=document.createElement("div"); apw.className="dsa"; apw.appendChild(ap);
   rs2.appendChild(apw);
@@ -2672,7 +2676,7 @@ function renderTeamDetail(t){
   /* -- pick per lane -- */
   if(s.roles.size){
     const byRole=new Map();
-    (t.players||[]).forEach(p=>{ if(p.role&&p.name&&p.name.trim()){
+    arr(t.players).forEach(p=>{ if(p&&p.role&&p.name&&p.name.trim()){
       byRole.set(p.role,(byRole.get(p.role)?byRole.get(p.role)+", ":"")+p.name.trim()); } });
     const sr=dsec("Pick per lane",
       "Turunan dari lane utama tiap hero, bukan catatan siapa yang megang. Nama pemain nempel dari role yang kamu isi di roster.");
@@ -2751,23 +2755,23 @@ function renderTeamDetail(t){
   d.appendChild(teamNotes(s));
 
   /* -- riwayat seri -- */
-  if((t.history||[]).length){
+  if(arr(t.history).length){
     const shx=dsec("Riwayat seri","Klik satu seri buat liat draft tiap game dari sudut pandang tim ini.");
     const hist=document.createElement("div"); hist.className="plist";
-    (t.history||[]).slice().reverse().forEach(h=>{
+    arr(t.history).slice().reverse().forEach(h=>{
       const wrap=document.createElement("div"); wrap.className="hitem";
       const r=document.createElement("button"); r.type="button"; r.className="srow";
       const res=document.createElement("b"); res.className=h.win?"wn":"ls";
       res.textContent=h.win?"Menang":"Kalah";
       const sp2=document.createElement("span"); sp2.textContent=h.score+" vs "+(h.vs||"—")
-        +((h.games&&h.games.length)?" · "+h.games.length+" game":"")+(h.mode==="arsip"?" · arsip":"");
+        +(arr(h.games).length?" · "+arr(h.games).length+" game":"")+(h.mode==="arsip"?" · arsip":"");
       const dt=document.createElement("span"); dt.className="d";
       dt.textContent=new Date(h.at).toLocaleDateString("id-ID",{day:"2-digit",month:"short"});
       const cv=document.createElement("span"); cv.className="chev"; cv.textContent="›";
       r.append(res,sp2,dt,cv);
       const body=document.createElement("div"); body.className="hbody"; body.hidden=true;
-      if(h.games&&h.games.length){
-        h.games.forEach(g=>{
+      if(arr(h.games).length){
+        arr(h.games).forEach(g=>{
           const gr=document.createElement("div"); gr.className="hg";
           const hd=document.createElement("div"); hd.className="hgh";
           const gl=document.createElement("b"); gl.textContent="G"+g.g;
@@ -2781,18 +2785,18 @@ function renderTeamDetail(t){
             const k=document.createElement("span"); k.className="k2"; k.textContent=label;
             rw.appendChild(k);
             const th=document.createElement("div"); th.className="gthumbs";
-            (ids||[]).forEach(id=>{
+            arr(ids).forEach(id=>{
               const hh=byId.get(id)||{name:id,img:null};
               const b2=document.createElement("div"); b2.className="gth"+(ban?" ban":""); b2.title=hh.name;
               b2.appendChild(portrait(hh)); th.appendChild(b2);
             });
-            if(!(ids||[]).length){ const e=document.createElement("span"); e.className="gnone"; e.textContent="—"; th.appendChild(e); }
+            if(!arr(ids).length){ const e=document.createElement("span"); e.className="gnone"; e.textContent="—"; th.appendChild(e); }
             rw.appendChild(th); return rw;
           };
           gr.appendChild(mk(g.mine,"Pick kita"));
           gr.appendChild(mk(g.theirs,"Pick lawan"));
-          if(g.myBans&&g.myBans.length) gr.appendChild(mk(g.myBans,"Ban kita",true));
-          if(g.theirBans&&g.theirBans.length) gr.appendChild(mk(g.theirBans,"Ban lawan",true));
+          if(arr(g.myBans).length) gr.appendChild(mk(g.myBans,"Ban kita",true));
+          if(arr(g.theirBans).length) gr.appendChild(mk(g.theirBans,"Ban lawan",true));
           body.appendChild(gr);
         });
       }else{
@@ -2919,7 +2923,7 @@ function archiveSeries(){
         myBans:(mine==="blue"?r.blueBans:r.redBans)||null,
         theirBans:(mine==="blue"?r.redBans:r.blueBans)||null};
     });
-    t.history=(t.history||[]).filter(h=>h.sid!==S.sid);
+    t.history=arr(t.history).filter(h=>h.sid!==S.sid);
     t.history.push({sid:S.sid,at:stamp,vs:tName(foe),mode:S.mode||"bp",
       win:S.score[k]>S.score[foe],score:S.score[k]+"-"+S.score[foe],games});
     saveTeam(t); n++;
