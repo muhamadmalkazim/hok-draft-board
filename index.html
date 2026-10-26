@@ -337,7 +337,14 @@ html,body{height:100%}
 .pills button{border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;color:var(--ink-mid);background:var(--track);transition:background .16s,color .16s}
 .pills button:hover{color:var(--ink)}
 .pills button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
-.grid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tile,94px),1fr));
+/* Kolom 1fr bikin lebar kartu nggak pasti waktu browser ngitung tinggi baris,
+   jadi aspect-ratio nggak kebawa dan barisnya kolaps ke tinggi teks kosong —
+   kartunya numpuk. Kolom dan baris dipatok ke --tile biar dua-duanya pasti;
+   sisa ruang dibagi ke jarak antar kolom, bukan ke ukuran kartunya. */
+.grid{flex:1 1 auto;min-height:0;display:grid;
+  grid-template-columns:repeat(auto-fill,var(--tile,94px));
+  grid-auto-rows:var(--tile,94px);
+  justify-content:space-between;
   gap:8px;align-content:start;overflow-y:auto;padding:2px 4px 6px;scrollbar-width:thin}
 .dens{display:flex;background:var(--track);border-radius:999px;padding:3px;gap:2px}
 .dens button{border-radius:999px;width:28px;height:26px;font-size:11.5px;font-weight:800;color:var(--ink-dim);transition:background .16s,color .16s}
@@ -345,6 +352,7 @@ html,body{height:100%}
 .dens button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
 .hc{position:relative;aspect-ratio:1/1;border-radius:16px;overflow:hidden;background:var(--sunk);
   box-shadow:var(--lift-sm);transition:transform .12s,box-shadow .16s;padding:0}
+
 .hc .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
 .hc .ph img{width:100%;height:100%;object-fit:cover;display:block}
 .hc .mono{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.03em;text-shadow:0 1px 4px rgba(0,0,0,.35)}
@@ -1467,6 +1475,17 @@ function mutable(o){
 }
 /* Teams persist across the series; sides change per game.
    Blue side always drafts first, so "who is on blue" IS the first-pick question. */
+/* ──────────────────────────────────────────────────────────────
+   Data yang udah kesimpen nggak selalu sebentuk sama yang ditulis
+   versi aplikasi sekarang: ada field yang dulunya angka, ada yang
+   dulunya nggak ada sama sekali. Satu baris bengkok cukup buat
+   matiin seluruh tab, jadi tiap bentuk dipaksa bener di tiga pintu
+   masuknya — buildRoster buat hero, migrate buat seri, fixBoard
+   buat papan — bukan di tiap tempat yang make.
+   ────────────────────────────────────────────────────────────── */
+function arr(v){ return Array.isArray(v)?v:[]; }
+function str(v,d){ return typeof v==="string"&&v.trim()?v:(d||""); }
+
 function freshDraft(blueTeam){ return {blueTeam:blueTeam||"t1",started:false,step:0,slots:SEQ.map(()=>null),done:false,target:null}; }
 function freshSeries(f,teams,mode,autoSwap){
   return {format:f||"bo5",game:1,mode:mode||"bp",autoSwap:autoSwap!==false,
@@ -1497,8 +1516,28 @@ const $=id=>document.getElementById(id);
 
 /* older saves keyed score and GBP by side, which mis-assigns both once teams swap */
 function migrate(s){
-  if(!s||typeof s!=="object"||!s.score) return null;
-  if("blue" in s.score || !s.teams) return null;
+  if(!s||typeof s!=="object"||!s.score||typeof s.score!=="object") return null;
+  if("blue" in s.score || !s.teams || typeof s.teams!=="object") return null;
+  /* mulai dari sini bentuknya dibenerin, bukan dibuang: isi seri itu mahal */
+  s.score={t1:Number(s.score.t1)||0,t2:Number(s.score.t2)||0};
+  s.teams={t1:str(s.teams.t1,"Tim 1"),t2:str(s.teams.t2,"Tim 2")};
+  const g=(s.gbp&&typeof s.gbp==="object")?s.gbp:{};
+  s.gbp={t1:arr(g.t1).filter(x=>typeof x==="string"),t2:arr(g.t2).filter(x=>typeof x==="string")};
+  const l=(s.link&&typeof s.link==="object")?s.link:{};
+  s.link={t1:typeof l.t1==="string"?l.t1:null,t2:typeof l.t2==="string"?l.t2:null};
+  s.results=arr(s.results).filter(r=>r&&typeof r==="object").map(r=>Object.assign({},r,{
+    blue:arr(r.blue),red:arr(r.red),blueBans:arr(r.blueBans),redBans:arr(r.redBans)}));
+  s.format=FORMATS[s.format]?s.format:"bo5";
+  s.mode=s.mode==="arsip"?"arsip":"bp";
+  s.game=Number(s.game)||1;
+  const d=(s.draft&&typeof s.draft==="object")?s.draft:null;
+  if(!d||!Array.isArray(d.slots)||d.slots.length!==SEQ.length){ s.draft=freshDraft(d&&d.blueTeam); }
+  else{
+    d.slots=d.slots.map(x=>typeof x==="string"&&x?x:null);
+    d.step=Math.max(0,Math.min(SEQ.length,Number(d.step)||0));
+    d.blueTeam=(d.blueTeam==="t2")?"t2":"t1";
+    d.started=!!d.started; d.done=!!d.done;
+  }
   return s;
 }
 
@@ -1535,18 +1574,26 @@ function buildRoster(ov){
   heroes=ROSTER.map(([name,lanes,dmg])=>({id:slug(name),name,lanes:lanes.slice(),dmg,img:null,prio:false,counters:[],combo:[]}));
   const seen=new Set(heroes.map(h=>h.id));
   Object.entries(ov||{}).forEach(([id,o])=>{
+    if(!o||typeof o!=="object") return;
+    const lanes=arr(o.lanes).filter(l=>LANES.includes(l));
+    const cs=arr(o.counters).filter(x=>typeof x==="string");
+    const cb=arr(o.combo).filter(x=>typeof x==="string");
+    const img=typeof o.img==="string"&&o.img?o.img:null;
+    const dmg=(o.dmg==="physical"||o.dmg==="magic")?o.dmg:null;
     if(seen.has(id)){ const h=heroes.find(x=>x.id===id);
-      Object.assign(h,{name:o.name??h.name,lanes:(o.lanes||h.lanes||[]).slice(),dmg:o.dmg===undefined?h.dmg:o.dmg,
-        img:o.img||null,prio:!!o.prio,counters:(o.counters||[]).slice(),combo:(o.combo||[]).slice(),edited:true});
-    }else{ heroes.push({id,name:o.name||id,lanes:(o.lanes||[]).slice(),dmg:o.dmg??null,img:o.img||null,prio:!!o.prio,
-        counters:(o.counters||[]).slice(),combo:(o.combo||[]).slice(),custom:true}); seen.add(id); }
+      Object.assign(h,{name:str(o.name,h.name),lanes:lanes.length?lanes:arr(h.lanes).slice(),
+        dmg:o.dmg===undefined?h.dmg:dmg,
+        img,prio:!!o.prio,counters:cs,combo:cb,edited:true});
+    }else{ heroes.push({id,name:str(o.name,id),lanes,dmg,img,prio:!!o.prio,
+        counters:cs,combo:cb,custom:true}); seen.add(id); }
   });
   heroes.sort((a,b)=>a.name.localeCompare(b.name));
   byId=new Map(heroes.map(h=>[h.id,h]));
   /* drop references to heroes that no longer exist, and keep combos mutual */
   heroes.forEach(h=>{
-    h.counters=(h.counters||[]).filter(x=>byId.has(x)&&x!==h.id);
-    h.combo=(h.combo||[]).filter(x=>byId.has(x)&&x!==h.id);
+    h.lanes=arr(h.lanes);
+    h.counters=arr(h.counters).filter(x=>byId.has(x)&&x!==h.id);
+    h.combo=arr(h.combo).filter(x=>byId.has(x)&&x!==h.id);
   });
   heroes.forEach(h=>h.combo.forEach(c=>{ const o=byId.get(c); if(o&&!o.combo.includes(h.id)) o.combo.push(h.id); }));
 }
@@ -2058,6 +2105,42 @@ const BLANK_BG="#1d231f";
 let boards=[], curBoard=null, penColor="#ff4d4d", penWidth=3, penMode="pen", tokSide="b";
 let bQuery="", bFilter="all", bGridBuilt=false, boardSaveTimer=null;
 
+/* Tim dari versi lama: `games` kesimpen sebagai jumlah, bukan daftar draft.
+   Jumlahnya disimpen ke gameCount biar tetap kebaca di riwayat, drafnya
+   emang nggak pernah ditulis jadi nggak bisa dibalikin. */
+function fixTeam(t){
+  if(!t||typeof t!=="object"||!t.id) return null;
+  t.name=str(t.name,"Tim");
+  t.logo=typeof t.logo==="string"&&t.logo?t.logo:null;
+  t.players=arr(t.players).filter(p=>p&&typeof p==="object").map(p=>({
+    name:typeof p.name==="string"?p.name:"",
+    role:LANES.includes(p.role)?p.role:null}));
+  t.history=arr(t.history).filter(h=>h&&typeof h==="object").map(h=>{
+    const ids=v=>arr(v).filter(x=>typeof x==="string");
+    if(typeof h.games==="number"&&h.games>0&&!h.gameCount) h.gameCount=h.games;
+    h.games=arr(h.games).filter(g=>g&&typeof g==="object").map(g=>({
+      g:Number(g.g)||1,side:g.side==="red"?"red":"blue",win:!!g.win,
+      mine:ids(g.mine),theirs:ids(g.theirs),
+      myBans:Array.isArray(g.myBans)?ids(g.myBans):null,
+      theirBans:Array.isArray(g.theirBans)?ids(g.theirBans):null}));
+    h.win=!!h.win; h.at=Number(h.at)||0;
+    h.vs=str(h.vs,"—"); h.score=str(h.score,""); h.mode=h.mode==="arsip"?"arsip":"bp";
+    return h;
+  });
+  t.at=Number(t.at)||0;
+  return t;
+}
+
+/* papan dari versi lama bisa nggak punya strokes/tokens sama sekali */
+function fixBoard(b){
+  if(!b||typeof b!=="object"||!b.id) return null;
+  b.name=str(b.name,"Papan");
+  b.bg=typeof b.bg==="string"&&b.bg?b.bg:null;
+  b.strokes=arr(b.strokes).filter(s=>s&&typeof s==="object"&&Array.isArray(s.pts));
+  b.tokens=arr(b.tokens).filter(t=>t&&typeof t==="object"&&typeof t.id==="string");
+  b.at=Number(b.at)||0;
+  return b;
+}
 function freshBoard(name){
   return {id:"b"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
     name:name||("Papan "+(boards.length+1)),bg:null,strokes:[],tokens:[],at:Date.now()};
@@ -2366,10 +2449,7 @@ let teams=[], logoTarget=null, teamOpen=null;
       on two games is noise; a coaching tool that dresses that up as
       a finding is worse than one that stays quiet.
    ────────────────────────────────────────────────────────────── */
-/* Riwayat yang ditulis versi lama aplikasi ini nyimpen `games` sebagai angka,
-   bukan daftar. Sekali ada satu baris kayak gitu, seluruh tab Tim ikut mati.
-   Jadi tiap field yang diharapkan daftar dipaksa jadi daftar dulu. */
-function arr(v){ return Array.isArray(v)?v:[]; }
+const gcount=h=>arr(h.games).length||Number(h.gameCount)||0;
 function teamStats(t){
   const hist=arr(t.history).slice().sort((a,b)=>(a.at||0)-(b.at||0));
   const S={
@@ -2764,7 +2844,7 @@ function renderTeamDetail(t){
       const res=document.createElement("b"); res.className=h.win?"wn":"ls";
       res.textContent=h.win?"Menang":"Kalah";
       const sp2=document.createElement("span"); sp2.textContent=h.score+" vs "+(h.vs||"—")
-        +(arr(h.games).length?" · "+arr(h.games).length+" game":"")+(h.mode==="arsip"?" · arsip":"");
+        +(gcount(h)?" · "+gcount(h)+" game":"")+(h.mode==="arsip"?" · arsip":"");
       const dt=document.createElement("span"); dt.className="d";
       dt.textContent=new Date(h.at).toLocaleDateString("id-ID",{day:"2-digit",month:"short"});
       const cv=document.createElement("span"); cv.className="chev"; cv.textContent="›";
@@ -3508,16 +3588,17 @@ async function importZip(file){
     buildRoster(ov); gridBuilt=false; relGridBuilt=false; bGridBuilt=false;
   }
   if(Array.isArray(d.teams)){
-    teams=d.teams.filter(t=>t&&t.id);
+    teams=d.teams.map(fixTeam).filter(Boolean);
     for(const t of teams){ t.logo=fixImg(t.logo)||null; await store.doc("teams/"+t.id).set(t); }
   }
   if(Array.isArray(d.boards)&&d.boards.length){
-    boards=d.boards.filter(b=>b&&b.id);
+    boards=d.boards.map(fixBoard).filter(Boolean);
     for(const b of boards){ b.bg=fixImg(b.bg)||null; await store.doc("boards/"+b.id).set(b); }
     curBoard=boards[0];
   }
-  if(d.series&&d.series.draft&&Array.isArray(d.series.draft.slots)&&d.series.draft.slots.length===SEQ.length){
-    S=d.series; if(S.mode!=="arsip") S.mode="bp";
+  const imported=migrate(d.series);
+  if(imported){
+    S=imported;
     if(S.autoSwap===undefined) S.autoSwap=true;
     await store.doc("state/series").set(S);
   }
@@ -3762,8 +3843,8 @@ initStore();
 try{ setDensity(localStorage.getItem("hokdraft.tile")||"m",false); }catch(e){ setDensity("m",false); }
 const cached=lsLoad();
 buildRoster(cached&&cached.ov);
-boards=(cached&&Array.isArray(cached.boards)?cached.boards:[]);
-teams=(cached&&Array.isArray(cached.teams)?cached.teams:[]);
+boards=arr(cached&&cached.boards).map(fixBoard).filter(Boolean);
+teams=arr(cached&&cached.teams).map(fixTeam).filter(Boolean);
 if(!boards.length) boards=[freshBoard("Papan 1")];
 let lastB=null; try{ lastB=localStorage.getItem("hokdraft.board"); }catch(e){}
 curBoard=boards.find(b=>b.id===lastB)||boards[0];
@@ -3815,7 +3896,7 @@ setView(["hero","rel","board","team"].includes(h0)?h0:"draft");
     const [sb,st]=await Promise.all([grab("boards"),grab("teams")]);
     if(sb.length){
       const have=new Set(boards.map(b=>b.id));
-      sb.forEach(b=>{ if(b&&b.id&&!have.has(b.id)) boards.push(b); });
+      sb.forEach(b=>{ const f=fixBoard(b); if(f&&!have.has(f.id)) boards.push(f); });
       boards=boards.filter(b=>b&&b.id&&(b.strokes||b.tokens||b.bg||sb.some(x=>x.id===b.id)));
       if(!boards.length) boards=[freshBoard("Papan 1")];
       boards.sort((a,b)=>(a.at||0)-(b.at||0));
@@ -3823,7 +3904,7 @@ setView(["hero","rel","board","team"].includes(h0)?h0:"draft");
     }
     if(st.length){
       const have=new Set(teams.map(t=>t.id));
-      st.forEach(t=>{ if(t&&t.id&&!have.has(t.id)) teams.push(t); });
+      st.forEach(t=>{ const f=fixTeam(t); if(f&&!have.has(f.id)) teams.push(f); });
       teams.sort((a,b)=>(a.at||0)-(b.at||0));
     }
     renderTeamList();
