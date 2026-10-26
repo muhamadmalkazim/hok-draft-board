@@ -835,6 +835,25 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .hc.waste::after{content:"";position:absolute;inset:0;z-index:2;
   background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(180,82,74,.18) 6px 12px)}
 
+/* datalist nggak nunjukin seluruh pilihan sampai field-nya dikosongin,
+   jadi daftar tim dikasih tombolnya sendiri */
+.pickteam{width:26px;height:26px;border-radius:9px;flex:0 0 auto;font-size:11px;line-height:1;
+  color:var(--ink-dim);background:var(--track);transition:background .14s,color .14s}
+.pickteam:hover{background:var(--sunk);color:var(--ink)}
+.teammenu{position:absolute;z-index:40;min-width:208px;max-height:300px;overflow-y:auto;
+  background:var(--raised);border-radius:16px;box-shadow:var(--lift-lg);padding:7px}
+.teammenu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:7px 9px;border-radius:11px;font-size:13px;font-weight:600;transition:background .12s}
+.teammenu button:hover{background:var(--track)}
+.teammenu .tm{width:26px;height:26px;border-radius:9px;overflow:hidden;position:relative;
+  background:var(--sunk);flex:0 0 auto}
+.teammenu .tm .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.teammenu .tm .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.teammenu .tm .mono{font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.teammenu .new{color:var(--ink-mid);font-weight:700}
+.teammenu .sep{height:1px;background:var(--sunk);margin:5px 2px}
+.teammenu .none{font-size:12px;color:var(--ink-dim);padding:8px 9px;font-style:italic}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(26px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:13px 26px;border-radius:999px;font-size:14px;font-weight:600;z-index:60;box-shadow:var(--lift-lg);animation:rise .22s ease-out;max-width:86vw;text-align:center}
 @keyframes rise{from{transform:translateX(-50%) translateY(10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -942,7 +961,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
     <div class="board">
       <section class="card team b">
         <div class="hd">
-          <input type="text" class="hdname" id="hdB" list="teamList" autocomplete="off" maxlength="28" aria-label="Tim sisi biru" title="Pilih tim terdaftar atau tulis nama baru">
+          <input type="text" class="hdname" id="hdB" autocomplete="off" maxlength="28" aria-label="Tim sisi biru" title="Pilih tim terdaftar atau tulis nama baru">
+          <button type="button" class="pickteam" id="pickB" aria-label="Pilih tim terdaftar" title="Pilih tim terdaftar">▾</button>
           <span class="editcue">ganti nama</span>
           <span class="fp">Biru · First pick</span><span class="cnt" id="cntB">0/5</span>
         </div>
@@ -952,7 +972,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 
       <section class="card team r">
         <div class="hd">
-          <input type="text" class="hdname" id="hdR" list="teamList" autocomplete="off" maxlength="28" aria-label="Tim sisi merah" title="Pilih tim terdaftar atau tulis nama baru">
+          <input type="text" class="hdname" id="hdR" autocomplete="off" maxlength="28" aria-label="Tim sisi merah" title="Pilih tim terdaftar atau tulis nama baru">
+          <button type="button" class="pickteam" id="pickR" aria-label="Pilih tim terdaftar" title="Pilih tim terdaftar">▾</button>
           <span class="editcue">ganti nama</span>
           <span class="fp">Merah</span><span class="cnt" id="cntR">0/5</span>
         </div>
@@ -4292,6 +4313,61 @@ function wireName(id,keyOf){
 }
 wireName("name1",()=>"t1");
 wireName("name2",()=>"t2");
+/* ---- pemilih tim terdaftar ----
+   Dropdown bawaan browser cuma nampilin pilihan yang cocok sama apa yang
+   lagi diketik, jadi tim lain kelihatan kayak nggak ada. Ini daftar penuh
+   yang kebuka dari tombolnya sendiri. */
+let teamMenu=null;
+function closeTeamMenu(){ if(teamMenu){ teamMenu.remove(); teamMenu=null;
+  document.removeEventListener("mousedown",onTeamMenuOut,true);
+  document.removeEventListener("keydown",onTeamMenuKey,true); } }
+function onTeamMenuOut(e){ if(teamMenu&&!teamMenu.contains(e.target)) closeTeamMenu(); }
+function onTeamMenuKey(e){ if(e.key==="Escape") closeTeamMenu(); }
+function openTeamMenu(btn,slotKey,inputId){
+  const open=teamMenu&&teamMenu.dataset.for===inputId;
+  closeTeamMenu();
+  if(open) return;
+  const m=document.createElement("div"); m.className="teammenu"; m.dataset.for=inputId;
+  const other=slotKey==="t1"?"t2":"t1";
+  const taken=S.link&&S.link[other];
+  const list=teams.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  if(!list.length){
+    const p=document.createElement("p"); p.className="none";
+    p.textContent="Belum ada tim terdaftar."; m.appendChild(p);
+  }
+  list.forEach(t=>{
+    const b=document.createElement("button"); b.type="button";
+    const av=document.createElement("span"); av.className="tm";
+    av.appendChild(portrait({name:t.name,img:t.logo}));
+    const n=document.createElement("span"); n.textContent=t.name;
+    b.append(av,n);
+    if(t.id===taken){ b.disabled=true; b.title="Lagi dipake di sisi satunya"; b.style.opacity=".4"; }
+    b.onclick=()=>{ closeTeamMenu(); linkTeamByName(slotKey,t.name); };
+    m.appendChild(b);
+  });
+  const sep=document.createElement("div"); sep.className="sep"; m.appendChild(sep);
+  const nb=document.createElement("button"); nb.type="button"; nb.className="new";
+  nb.textContent="+ Tulis nama tim baru";
+  nb.onclick=()=>{ closeTeamMenu(); const el=$(inputId); el.value=""; el.focus(); };
+  m.appendChild(nb);
+
+  document.body.appendChild(m);
+  const r=btn.getBoundingClientRect();
+  const w=m.offsetWidth, hgt=m.offsetHeight;
+  let left=Math.min(r.left,window.innerWidth-w-10);
+  let top=r.bottom+6;
+  if(top+hgt>window.innerHeight-10) top=Math.max(10,r.top-hgt-6);
+  m.style.left=Math.max(10,left)+"px"; m.style.top=top+"px";
+  teamMenu=m;
+  setTimeout(()=>{
+    document.addEventListener("mousedown",onTeamMenuOut,true);
+    document.addEventListener("keydown",onTeamMenuKey,true);
+  },0);
+}
+$("pickB").onclick=()=>openTeamMenu($("pickB"),teamOnSide("blue"),"hdB");
+$("pickR").onclick=()=>openTeamMenu($("pickR"),teamOnSide("red"),"hdR");
+window.addEventListener("resize",closeTeamMenu);
+
 wireName("hdB",()=>teamOnSide("blue"));
 wireName("hdR",()=>teamOnSide("red"));
 $("btnStart").onclick=startGame;
