@@ -1180,10 +1180,11 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
         <div class="subj" id="subj"></div>
         <div class="relbox">
           <div class="relhd">
-            <span class="lbl">Hero ini kuat lawan</span>
+            <span class="lbl">Lemah lawan</span>
             <button class="pill sm" id="armCounters">+ Tambah</button>
           </div>
           <div class="chips2" id="listCounters"></div>
+          <p class="note sm">Hero yang bikin hero ini susah. Ini yang dipakai buat nyaranin pick lawan dan kandidat ban.</p>
         </div>
         <div class="relbox">
           <div class="relhd">
@@ -1194,9 +1195,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
           <p class="note sm">Combo otomatis dua arah — kalau A combo sama B, B juga combo sama A.</p>
         </div>
         <div class="relbox">
-          <div class="relhd"><span class="lbl">Dicounter sama</span></div>
+          <div class="relhd"><span class="lbl">Kuat lawan</span></div>
           <div class="chips2" id="listBy"></div>
-          <p class="note sm">Dihitung otomatis dari hero lain yang lo tandai kuat lawan hero ini.</p>
+          <p class="note sm">Dihitung otomatis dari hero lain yang lo tandai lemah lawan hero ini. Nggak perlu diisi.</p>
         </div>
       </section>
     </div>
@@ -1730,10 +1731,10 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="eee70a61";   /* diisi pas build */
+const APP_VER="a1c960b4";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
-  counters:h.counters||[],combo:h.combo||[],custom:!!h.custom}; }
+  weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
 function overridesOut(){ const o={}; heroes.forEach(h=>{ if(h.custom||h.edited) o[h.id]=heroDoc(h); }); return o; }
 function lsSave(){ try{ localStorage.setItem(LS,JSON.stringify({S,ov:overridesOut(),boards,teams})); }catch(e){} }
 function lsLoad(){ try{ const r=localStorage.getItem(LS); return r?JSON.parse(r):null; }catch(e){ return null; } }
@@ -1754,28 +1755,29 @@ function saveHero(h){ dirty=true; lsSave();
   store.doc("heroes/"+h.id).set(heroDoc(h)).then(()=>markSaved(true)).catch(()=>markSaved(false)); }
 
 function buildRoster(ov){
-  heroes=ROSTER.map(([name,lanes,dmg])=>({id:slug(name),name,lanes:lanes.slice(),dmg,img:null,prio:false,counters:[],combo:[]}));
+  heroes=ROSTER.map(([name,lanes,dmg])=>({id:slug(name),name,lanes:lanes.slice(),dmg,img:null,prio:false,weak:[],combo:[]}));
   const seen=new Set(heroes.map(h=>h.id));
   Object.entries(ov||{}).forEach(([id,o])=>{
     if(!o||typeof o!=="object") return;
     const lanes=arr(o.lanes).filter(l=>LANES.includes(l));
-    const cs=arr(o.counters).filter(x=>typeof x==="string");
+    /* field `counters` dari versi lama artinya kebalik ("kuat lawan"), jadi nggak dipungut */
+    const cs=arr(o.weak).filter(x=>typeof x==="string");
     const cb=arr(o.combo).filter(x=>typeof x==="string");
     const img=typeof o.img==="string"&&o.img?o.img:null;
     const dmg=(o.dmg==="physical"||o.dmg==="magic")?o.dmg:null;
     if(seen.has(id)){ const h=heroes.find(x=>x.id===id);
       Object.assign(h,{name:str(o.name,h.name),lanes:lanes.length?lanes:arr(h.lanes).slice(),
         dmg:o.dmg===undefined?h.dmg:dmg,
-        img,prio:!!o.prio,counters:cs,combo:cb,edited:true});
+        img,prio:!!o.prio,weak:cs,combo:cb,edited:true});
     }else{ heroes.push({id,name:str(o.name,id),lanes,dmg,img,prio:!!o.prio,
-        counters:cs,combo:cb,custom:true}); seen.add(id); }
+        weak:cs,combo:cb,custom:true}); seen.add(id); }
   });
   heroes.sort((a,b)=>a.name.localeCompare(b.name));
   byId=new Map(heroes.map(h=>[h.id,h]));
   /* drop references to heroes that no longer exist, and keep combos mutual */
   heroes.forEach(h=>{
     h.lanes=arr(h.lanes);
-    h.counters=arr(h.counters).filter(x=>byId.has(x)&&x!==h.id);
+    h.weak=arr(h.weak).filter(x=>byId.has(x)&&x!==h.id);
     h.combo=arr(h.combo).filter(x=>byId.has(x)&&x!==h.id);
   });
   heroes.forEach(h=>h.combo.forEach(c=>{ const o=byId.get(c); if(o&&!o.combo.includes(h.id)) o.combo.push(h.id); }));
@@ -2114,9 +2116,10 @@ function glowMaps(){
   const theirs=slotsFor(foeSide,"pick").map(i=>d.slots[i]).filter(Boolean);
   const beats = st.p==="pick" ? theirs : mine;
   const withWho = st.p==="pick" ? mine : theirs;
-  if(beats.length) heroes.forEach(h=>{
-    const n=(h.counters||[]).filter(c=>beats.includes(c)).length; if(n) counter[h.id]=n;
-  });
+  /* Arahnya kebalik dari sebelumnya: sekarang yang dicatat itu "hero ini
+     lemah lawan siapa", jadi lawan dari hero X ya isi daftar X.weak. */
+  beats.forEach(id=>{ const t=byId.get(id); if(!t) return;
+    arr(t.weak).forEach(c=>{ counter[c]=(counter[c]||0)+1; }); });
   withWho.forEach(p=>{ const h=byId.get(p); if(!h) return;
     (h.combo||[]).forEach(c=>{ combo[c]=(combo[c]||0)+1; }); });
   return {counter,combo,phase:st.p};
@@ -2547,7 +2550,7 @@ async function exportAll(){
   const want=new Map();                       /* assetId -> path inside the zip, minus extension */
   const heroesOut=heroes.map(h=>{
     const o={id:h.id,name:h.name,lanes:h.lanes||[],dmg:h.dmg||null,prio:!!h.prio,
-      counters:h.counters||[],combo:h.combo||[],custom:!!h.custom,img:null};
+      weak:h.weak||[],combo:h.combo||[],custom:!!h.custom,img:null};
     if(h.img){ o.img="images/heroes/"+h.id; want.set(h.img,"images/heroes/"+h.id); }
     return o;
   });
@@ -3239,7 +3242,7 @@ function setArm(mode){
   note.textContent = mode==="subject"
     ? (relSubject?"Klik hero buat ganti hero yang lagi diatur.":"Klik hero di kanan buat mulai.")
     : mode==="counters"
-      ? "Klik hero yang DIKALAHIN sama "+tn(relSubject)+". Klik lagi buat batal."
+      ? "Klik hero yang NGALAHIN "+tn(relSubject)+". Klik lagi buat batal."
       : "Klik hero yang COMBO sama "+tn(relSubject)+". Klik lagi buat batal.";
   relGridBuilt=false; renderRelGrid();
 }
@@ -3268,15 +3271,15 @@ function renderRel(){
   chg.onclick=()=>setArm("subject"); box.appendChild(chg);
 
   $("armCounters").disabled=false; $("armCombo").disabled=false;
-  fillChips($("listCounters"),h.counters,id=>{
-    h.counters=h.counters.filter(x=>x!==id); h.edited=true; saveHero(h); renderRel();
+  fillChips($("listCounters"),h.weak,id=>{
+    h.weak=h.weak.filter(x=>x!==id); h.edited=true; saveHero(h); renderRel();
   });
   fillChips($("listCombo"),h.combo,id=>{
     h.combo=h.combo.filter(x=>x!==id); h.edited=true; saveHero(h);
     const o=byId.get(id); if(o){ o.combo=(o.combo||[]).filter(x=>x!==h.id); o.edited=true; saveHero(o); }
     renderRel();
   });
-  fillChips($("listBy"),heroes.filter(x=>(x.counters||[]).includes(h.id)).map(x=>x.id),null);
+  fillChips($("listBy"),heroes.filter(x=>arr(x.weak).includes(h.id)).map(x=>x.id),null);
   setArmNoteOnly();
   renderRelGrid();
 }
@@ -3286,7 +3289,7 @@ function setArmNoteOnly(){
   note.textContent = (relArm==="subject"||!relSubject)
     ? (relSubject?"Klik hero buat ganti hero yang lagi diatur.":"Klik hero di kanan buat mulai.")
     : relArm==="counters"
-      ? "Klik hero yang DIKALAHIN sama "+tn(relSubject)+". Klik lagi buat batal."
+      ? "Klik hero yang NGALAHIN "+tn(relSubject)+". Klik lagi buat batal."
       : "Klik hero yang COMBO sama "+tn(relSubject)+". Klik lagi buat batal.";
 }
 function buildRelGrid(){
@@ -3333,7 +3336,7 @@ function renderRelGrid(){
 function relClick(id){
   if(relArm==="subject"||!relSubject){ relSubject=id; setArm("counters"); renderRel(); return; }
   const subj=byId.get(relSubject); if(!subj||id===subj.id){ toast("Nggak bisa relasi ke diri sendiri."); return; }
-  const list=relArm==="counters"?"counters":"combo";
+  const list=relArm==="counters"?"weak":"combo";
   subj[list]=subj[list]||[];
   const at=subj[list].indexOf(id);
   if(at>=0){
@@ -3343,7 +3346,7 @@ function relClick(id){
   }else{
     subj[list].push(id);
     if(list==="combo"){ const o=byId.get(id); if(o){ o.combo=o.combo||[]; if(!o.combo.includes(subj.id)) o.combo.push(subj.id); o.edited=true; saveHero(o); } }
-    toast(list==="counters"?subj.name+" kuat lawan "+tn(id):subj.name+" combo sama "+tn(id));
+    toast(list==="weak"?subj.name+" lemah lawan "+tn(id):subj.name+" combo sama "+tn(id));
   }
   subj.edited=true; saveHero(subj); renderRel();
 }
@@ -3366,28 +3369,22 @@ function suggest(){
     const combo={},counter={};
     mine.forEach(p=>{ const h=byId.get(p); if(!h) return;
       (h.combo||[]).forEach(c=>{ if(free(c)&&!S.gbp[me].includes(c)) combo[c]=(combo[c]||0)+1; }); });
-    if(theirs.length) heroes.forEach(h=>{
-      if(!free(h.id)||S.gbp[me].includes(h.id)) return;
-      const n=(h.counters||[]).filter(c=>theirs.includes(c)).length;
-      if(n) counter[h.id]=n;
-    });
+    theirs.forEach(id=>{ const t=byId.get(id); if(!t) return;
+      arr(t.weak).forEach(c=>{ if(free(c)&&!S.gbp[me].includes(c)) counter[c]=(counter[c]||0)+1; }); });
     return {kind:"pick",rows:[
       ["Combo sama pick lo",topOf(combo,10)],
       ["Counter buat pick musuh",topOf(counter,10)]
     ]};
   }
   const threat={};
-  if(mine.length) heroes.forEach(h=>{
-    if(!free(h.id)||S.gbp[foe].includes(h.id)) return;
-    const n=(h.counters||[]).filter(c=>mine.includes(c)).length;
-    if(n) threat[h.id]=n;
-  });
+  mine.forEach(id=>{ const t=byId.get(id); if(!t) return;
+    arr(t.weak).forEach(c=>{ if(free(c)&&!S.gbp[foe].includes(c)) threat[c]=(threat[c]||0)+1; }); });
   return {kind:"ban",rows:[["Bahaya buat pick lo — kandidat ban",topOf(threat,10)]]};
 }
 function renderSuggest(){
   const s=suggest();
   const sect=$("sugSect");
-  const anyData=heroes.some(h=>(h.counters&&h.counters.length)||(h.combo&&h.combo.length));
+  const anyData=heroes.some(h=>arr(h.weak).length||arr(h.combo).length);
   if(!s||!anyData){ sect.hidden=true; return; }
   sect.hidden=false;
   const d=S.draft, st=SEQ[d.step], side=sideOf(st.s);
@@ -3711,7 +3708,7 @@ function addHero(){
   let n=1, name="Hero baru";
   while(heroes.some(h=>h.name===name)){ n++; name="Hero baru "+n; }
   const id=slug(name)+"-"+Date.now().toString(36).slice(-4);
-  const h={id,name,lanes:[],dmg:null,img:null,prio:false,counters:[],combo:[],custom:true};
+  const h={id,name,lanes:[],dmg:null,img:null,prio:false,weak:[],combo:[],custom:true};
   heroes.push(h); heroes.sort((a,b)=>a.name.localeCompare(b.name)); byId.set(id,h);
   saveHero(h); gridBuilt=false; hQuery=""; $("hq").value=""; hFilter="all";
   [...$("hFilters").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v==="all")));
@@ -3774,7 +3771,7 @@ async function importZip(file){
     for(const h of d.heroes){
       if(!h||!h.id) continue;
       ov[h.id]={name:h.name,lanes:h.lanes||[],dmg:h.dmg??null,img:fixImg(h.img)||null,
-        prio:!!h.prio,counters:h.counters||[],combo:h.combo||[],custom:!!h.custom};
+        prio:!!h.prio,weak:h.weak||[],combo:h.combo||[],custom:!!h.custom};
       await store.doc("heroes/"+h.id).set(ov[h.id]);
     }
     buildRoster(ov); gridBuilt=false; relGridBuilt=false; bGridBuilt=false;
@@ -3924,8 +3921,8 @@ function simGlow(){
   const mine=simPicksOf(side), theirs=simPicksOf(foe);
   const beats = st.p==="pick" ? theirs : mine;
   const withWho = st.p==="pick" ? mine : theirs;
-  if(beats.length) heroes.forEach(h=>{
-    const n=arr(h.counters).filter(c=>beats.includes(c)).length; if(n) counter[h.id]=n; });
+  beats.forEach(id=>{ const t=byId.get(id); if(!t) return;
+    arr(t.weak).forEach(c=>{ counter[c]=(counter[c]||0)+1; }); });
   withWho.forEach(p=>{ const h=byId.get(p); if(!h) return;
     arr(h.combo).forEach(c=>{ combo[c]=(combo[c]||0)+1; }); });
   return {counter,combo,phase:st.p};
