@@ -698,11 +698,17 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .tile .tnum{font-size:23px;font-weight:800;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
 .tile .tsub{font-size:9.5px;line-height:1.35;color:var(--ink-mid);font-variant-numeric:tabular-nums}
 
-.dcols{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px 26px;align-items:start}
-.dcol{min-width:0;display:flex;flex-direction:column}
+/* Dua kolom tetap bikin lubang: yang kiri abis duluan, yang kanan masih
+   panjang. Kolom koran ngalirin bagian berikutnya ke ruang kosong itu
+   sendiri, dan jumlah kolomnya nyesuain lebar layar. */
+.dcols{columns:330px 3;column-gap:28px}
+.dcols>.dsec{break-inside:avoid;-webkit-column-break-inside:avoid;display:block;width:100%}
 
 .dsec{padding-top:16px;margin-top:16px;border-top:1px solid var(--sunk)}
-.dcol>.dsec:first-child{border-top:0;padding-top:0;margin-top:0}
+/* di kolom koran, garis atas tiap bagian jadi pemisah antar bagian;
+   yang pertama di tiap kolom nggak perlu garis, tapi CSS nggak tau mana
+   yang jatuh di pucuk kolom — jadi semua dikasih jarak yang sama */
+.dcols>.dsec:first-child{border-top:0;padding-top:0;margin-top:0}
 .dsec.full{border-top:1px solid var(--sunk);margin-top:20px;padding-top:18px}
 .dsh{display:flex;align-items:baseline;gap:10px}
 .dsh b{font-size:13.5px;font-weight:800;letter-spacing:-.01em}
@@ -717,7 +723,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 
 /* satu baris statistik hero: thumb · nama · jumlah · W–L · bar */
 /* kolom kanan lebar; tanpa batas ini angkanya kelempar jauh dari namanya */
-.hsl{display:flex;flex-direction:column;gap:2px;margin-top:10px;max-width:520px}
+.hsl{display:flex;flex-direction:column;gap:2px;margin-top:10px}
 .hsr{display:grid;grid-template-columns:28px minmax(0,1fr) 38px 44px 104px;gap:10px;align-items:center;
   padding:3px 7px;border-radius:9px;transition:background .13s}
 .hsr:hover{background:var(--track)}
@@ -738,7 +744,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 
 /* ---- teams: bagian yang dipake dua lapis ---- */
 .plist{display:flex;flex-direction:column;gap:6px}
-.dsec .plist{max-width:520px}
+.dsec .plist{max-width:560px}
 .prow{display:grid;grid-template-columns:minmax(0,1fr) 100px 30px;gap:7px;align-items:center}
 .prow input,.prow select{background:var(--track);box-shadow:none;border-radius:10px;padding:7px 11px;font-size:12.5px}
 .prow select{appearance:none}
@@ -768,9 +774,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 
 @media (max-width:980px){
   .dtop{grid-template-columns:minmax(0,1fr)}
-  .dcols{grid-template-columns:minmax(0,1fr)}
-  .dcol>.dsec:first-child{border-top:1px solid var(--sunk);padding-top:16px;margin-top:16px}
-  .dcols>.dcol:first-child>.dsec:first-child{border-top:0;padding-top:0;margin-top:0}
+  .dcols{columns:1}
   .tiles{grid-template-columns:repeat(auto-fit,minmax(92px,1fr))}
 }
 @media (max-width:620px){
@@ -1729,7 +1733,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="aac26ba2";   /* diisi pas build */
+const APP_VER="dca2ccba";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -2901,8 +2905,6 @@ function renderTeamDetail(t){
 
   /* -- dua kolom -- */
   const cols=document.createElement("div"); cols.className="dcols";
-  const colA=document.createElement("div"); colA.className="dcol";
-  const colB=document.createElement("div"); colB.className="dcol";
 
   /* roster */
   const rs2=dsec("Roster","Role dipake buat nyambungin pick per lane.");
@@ -2933,7 +2935,7 @@ function renderTeamDetail(t){
     t.players.push({name:"",role:null}); saveTeam(t); renderTeams(); };
   const apw=document.createElement("div"); apw.className="dsa"; apw.appendChild(ap);
   rs2.appendChild(apw);
-  colA.appendChild(rs2);
+  cols.appendChild(rs2);
 
   /* lawan */
   if(s.foes.size){
@@ -2949,7 +2951,7 @@ function renderTeamDetail(t){
       box.appendChild(r);
     });
     sf.appendChild(box);
-    colA.appendChild(sf);
+    cols.appendChild(sf);
   }
 
   /* hero kami */
@@ -2957,7 +2959,7 @@ function renderTeamDetail(t){
   if(mine.length){
     const sh=dsec("Hero kami","Angka menang–kalah ikut ditulis supaya persentase di bawah "+MIN_SAMPLE+" game nggak kebaca kayak fakta.");
     sh.appendChild(heroList(mine,14));
-    colB.appendChild(sh);
+    cols.appendChild(sh);
   }
 
   /* pick per lane — satu daftar, lane-nya dipilih dari chip di atas */
@@ -2980,10 +2982,9 @@ function renderTeamDetail(t){
     });
     sr.appendChild(chips);
     sr.appendChild(heroList(rank(s.roles.get(laneOpen)),8));
-    colB.appendChild(sr);
+    cols.appendChild(sr);
   }
 
-  cols.append(colA,colB);
   d.appendChild(cols);
 
   /* -- riwayat seri -- */
