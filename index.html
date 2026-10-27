@@ -285,27 +285,25 @@ html,body{height:100%}
 @keyframes pop{from{transform:scale(.88);opacity:.2}to{transform:scale(1);opacity:1}}
 
 /* ---- status strip ---- */
-.spine{padding:14px 18px 16px;display:flex;flex-direction:column;gap:13px}
-.turn{border-radius:16px;padding:12px 18px;box-shadow:var(--gloss);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.turn .who{font-size:19px;font-weight:800;line-height:1.1;letter-spacing:-.02em;min-width:0}
+.spine{padding:11px 16px 12px;display:flex;flex-direction:column;gap:10px}
+.spinerow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.spinerow .sp{flex:1 1 auto}
+.spinerow .acts{display:flex;gap:7px;flex-wrap:wrap}
+.turn{border-radius:999px;padding:6px 14px;display:flex;align-items:center;gap:10px;flex:0 1 auto;min-width:0}
+.turn .who{font-size:14px;font-weight:800;line-height:1.2;letter-spacing:-.01em;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .turn .act{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;opacity:.85;
   background:rgba(255,255,255,.18);padding:5px 12px;border-radius:999px}
 .turn.idle .act{background:var(--sunk)}
-.turn .step{margin-left:auto;font-size:13px;font-weight:700;opacity:.75;font-variant-numeric:tabular-nums}
+.turn .step{font-size:12px;font-weight:700;opacity:.75;font-variant-numeric:tabular-nums;white-space:nowrap}
 .turn.b{background:var(--blue);color:#fff} .turn.r{background:var(--red);color:#fff}
 .turn.idle{background:var(--track);color:var(--ink-mid)}
-.turn.idle .who{font-size:16px}
-.rail{display:flex;gap:12px}
-.phase{display:flex;flex-direction:column;gap:5px;min-width:0}
-.phase .pn{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
-.phase .pn b{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:var(--ink-dim);white-space:nowrap}
-.phase .pn i{font-style:normal;font-size:10px;color:var(--ink-dim);font-variant-numeric:tabular-nums;font-weight:700}
-.ticks{display:flex;gap:3px}
+.turn.idle .who{font-size:13.5px}
 .tk{flex:1;height:7px;border-radius:999px;background:var(--sunk);transition:background .22s}
 .tk.b{background:var(--blue)} .tk.r{background:var(--red)}
 .tk.now{background:var(--ink);animation:breathe 1.6s ease-in-out infinite}
 @keyframes breathe{0%,100%{opacity:1}50%{opacity:.4}}
-.hint{font-size:12.5px;color:var(--ink-mid);line-height:1.45;margin:0}
+.hint{font-size:12px;color:var(--ink-dim);line-height:1.45;margin:0}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
 .winq{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   background:var(--track);border-radius:16px;padding:12px 16px}
@@ -470,21 +468,23 @@ html,body{height:100%}
 .gbpcols{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:20px}
 @media (max-width:620px){.gbpcols{grid-template-columns:1fr;gap:18px}}
 /* ---- per-game draft replay ---- */
-.gpv{display:flex;flex-direction:column;gap:11px;margin-top:14px}
-.gcard{background:var(--track);border-radius:20px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px}
-.gcard .gh{display:flex;align-items:center;gap:10px}
-.gcard .gh b{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:800;color:var(--ink-dim)}
-.gcard .gh .w{margin-left:auto;font-size:12.5px;font-weight:700;background:var(--panel);
-  padding:4px 12px;border-radius:999px}
-.gteams{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media (max-width:700px){.gteams{grid-template-columns:1fr;gap:14px}}
-.gteam{display:flex;flex-direction:column;gap:9px;min-width:0}
-.gteam .gt{display:flex;align-items:center;gap:8px;min-width:0}
-.gteam .gt .tn{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.gsets{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.gpv{display:flex;flex-direction:column;margin-top:10px}
+.grow{display:grid;grid-template-columns:46px minmax(0,1fr) minmax(0,1fr) 92px;gap:12px;
+  align-items:center;padding:6px 2px;border-top:1px solid var(--sunk)}
+.grow.ghead{border-top:0;padding-bottom:3px}
+.grow.ghead .gtn,.grow.ghead .gw{font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+  font-weight:800;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grow .gno{display:flex;align-items:baseline;gap:5px;min-width:0}
+.grow .gno b{font-size:11px;font-weight:800;color:var(--ink-mid)}
+.grow .gno i{font-size:8.5px;font-style:normal;color:var(--ink-dim);letter-spacing:.06em;text-transform:uppercase}
+.gpick{display:flex;align-items:center;gap:4px;min-width:0;flex-wrap:wrap}
+.gpick .gth{width:30px;height:30px;border-radius:9px}
+.sidedot{width:4px;height:22px;border-radius:999px;flex:0 0 auto;margin-right:3px}
+.sidedot.b{background:var(--blue)} .sidedot.r{background:var(--red)}
+.grow .gw{font-size:11.5px;font-weight:700;text-align:right;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.grow .gw.t1{color:var(--blue-deep)} .grow .gw.t2{color:var(--red-deep)}
 .gnone{font-size:11px;color:var(--ink-dim);font-style:italic;padding-top:7px}
-.gset{display:flex;flex-direction:column;gap:5px;min-width:0}
-.gset .k{font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--ink-dim)}
 .gthumbs{display:flex;gap:5px;flex-wrap:wrap}
 .gth{width:30px;height:30px;border-radius:10px;overflow:hidden;position:relative;background:var(--sunk);flex:0 0 auto}
 .gth .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
@@ -493,10 +493,6 @@ html,body{height:100%}
 .gth.ban .ph{filter:grayscale(1) contrast(.85);opacity:.5}
 .gth.ban::after{content:"";position:absolute;inset:0;
   background:linear-gradient(135deg,transparent 42%,var(--red) 43%,var(--red) 57%,transparent 58%)}
-.gpick{width:46px;display:flex;flex-direction:column;gap:4px;flex:0 0 auto}
-.gpick .gth{width:46px;height:46px;border-radius:12px}
-.gpick .pn2{font-size:9px;font-weight:700;line-height:1.1;color:var(--ink-mid);text-align:center;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ---- crop dialog ---- */
 .modal{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(20,24,20,.62);
@@ -571,17 +567,18 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .savebar.done .stxt b{color:var(--ok)}
 
 /* ---- draft suggestions ---- */
-.sug{padding:14px 18px 16px}
-.sughd{display:flex;align-items:baseline;gap:10px;margin-bottom:11px;flex-wrap:wrap}
+.sug{padding:12px 16px 13px}
+.sughd{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;flex-wrap:wrap}
 .sughd h3{font-size:12px;letter-spacing:.13em;text-transform:uppercase;font-weight:800;color:var(--ink-mid)}
 .sugnote{font-size:12px;color:var(--ink-dim)}
-.sugrow{margin-bottom:12px}
-.sugrow:last-child{margin-bottom:0}
-.sugrow .k{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--ink-dim);margin-bottom:7px}
+/* dua baris ketumpuk kebanyakan makan tinggi; dijejerin selama muat */
+#sugBody{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 20px}
+.sugrow{min-width:0}
+.sugrow .k{display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--ink-dim);margin-bottom:5px}
 .sugs{display:flex;gap:7px;flex-wrap:wrap}
-.sugp{width:52px;display:flex;flex-direction:column;gap:4px;position:relative;padding:0;background:none;transition:transform .12s}
+.sugp{width:46px;display:flex;flex-direction:column;gap:4px;position:relative;padding:0;background:none;transition:transform .12s}
 .sugp:hover{transform:translateY(-2px)}
-.sugp .box2{position:relative;width:52px;height:52px;border-radius:14px;overflow:hidden;background:var(--sunk);box-shadow:var(--lift-sm)}
+.sugp .box2{position:relative;width:46px;height:46px;border-radius:12px;overflow:hidden;background:var(--sunk);box-shadow:var(--lift-sm)}
 .sugp .box2 .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
 .sugp .box2 .ph img{width:100%;height:100%;object-fit:cover;display:block}
 .sugp .box2 .mono{font-size:17px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
@@ -875,6 +872,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .newver .pill.ghost{background:transparent;color:var(--panel);opacity:.7}
 .newver .pill.ghost:hover{background:rgba(255,255,255,.14);color:var(--panel)}
 
+.gpv{margin-top:8px}
+.shnote{font-size:11px;color:var(--ink-dim);margin-left:9px}
+.gbp h3{display:inline}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(26px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:13px 26px;border-radius:999px;font-size:14px;font-weight:600;z-index:60;box-shadow:var(--lift-lg);animation:rise .22s ease-out;max-width:86vw;text-align:center}
 @keyframes rise{from{transform:translateX(-50%) translateY(10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -967,20 +968,22 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
     </section>
 
     <section class="card spine">
-      <div class="turn idle" id="turn"><div class="who">Belum mulai</div></div>
-      <div class="rail" id="rail"></div>
-      <p class="hint" id="hint">Pilih format seri dan sisi first pick, lalu tekan Mulai game.</p>
+      <div class="spinerow">
+        <div class="turn idle" id="turn"><div class="who">Belum mulai</div></div>
+        <span class="sp"></span>
+        <div class="acts">
+          <button class="pill sm" id="btnUndo">Undo</button>
+          <button class="pill sm" id="btnResetGame">Ulang game ini</button>
+          <button class="pill sm" id="btnResetSeries">Reset seri</button>
+        </div>
+      </div>
+      <p class="hint" id="hint" hidden>Pilih format seri dan sisi first pick, lalu tekan Mulai game.</p>
       <div class="winq" id="winq" hidden>
         <span class="lbl">Menang?</span>
         <div class="wbtns">
           <button class="b" data-side="blue" id="winB">Tim 1</button>
           <button class="r" data-side="red" id="winR">Tim 2</button>
         </div>
-      </div>
-      <div class="acts">
-        <button class="pill" id="btnUndo">Undo</button>
-        <button class="pill" id="btnResetGame">Ulang game ini</button>
-        <button class="pill" id="btnResetSeries">Reset seri</button>
       </div>
     </section>
 
@@ -1012,8 +1015,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
     </section>
 
     <section class="card gbp" id="histSect" hidden>
-      <h3>Draft tiap game</h3>
-      <p class="note">Pick tiap tim otomatis terkunci GBP buat tim itu sampai seri selesai — kuncinya ikut tim, bukan sisi. Ban tidak ikut terkunci.</p>
+      <h3>Draft tiap game</h3><span class="shnote">pick doang — GBP ikut tim, bukan sisi</span>
       <div class="gpv" id="gpv"></div>
     </section>
     </div><!-- /pane left -->
@@ -1733,7 +1735,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="5e6dd291";   /* diisi pas build */
+const APP_VER="c5f94916";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -1901,65 +1903,52 @@ function compInto(el,title,picks){
 }
 
 /* ---- spine ---- */
+/* Satu baris tipis: siapa yang jalan, langkah ke berapa, dan tombolnya.
+   Rel fase yang dulu ngambil satu blok sendiri dibuang — slot yang lagi
+   aktif udah kelihatan nyala di panel tim, dan hitungan 12/18 ngasih
+   kemajuan yang sama tanpa makan tempat. Teks petunjuk cuma nongol pas
+   bener-bener ngarahin, bukan tiap langkah. */
 function renderSpine(){
-  const d=S.draft, t=$("turn"), rail=$("rail");
-  rail.textContent="";
-  PHASES.forEach(ph=>{
-    const box=document.createElement("div"); box.className="phase";
-    const pn=document.createElement("div"); pn.className="pn";
-    box.style.flex=(ph.b-ph.a)+" 1 0";
-    const b=document.createElement("b"); b.textContent=ph.n;
-    const i=document.createElement("i");
-    i.textContent=d.slots.slice(ph.a,ph.b).filter(Boolean).length+"/"+(ph.b-ph.a);
-    pn.appendChild(b); pn.appendChild(i); box.appendChild(pn);
-    const ticks=document.createElement("div"); ticks.className="ticks";
-    for(let k=ph.a;k<ph.b;k++){
-      const e=document.createElement("div"); let c="tk";
-      if(d.slots[k]) c+=" "+(sideOf(SEQ[k].s)==="blue"?"b":"r");
-      if(d.started&&!d.done&&d.step===k) c+=" now";
-      e.className=c; ticks.appendChild(e);
-    }
-    box.appendChild(ticks); rail.appendChild(box);
-  });
-
+  const d=S.draft, t=$("turn"), hint=$("hint");
   t.textContent="";
   const who=document.createElement("div"); who.className="who";
   const act=document.createElement("div"); act.className="act";
   const stepN=document.createElement("div"); stepN.className="step";
+  let tip="";
   if(S.over){
     const w=S.score.t1>S.score.t2?"t1":"t2";
     t.className="turn "+(sideOfTeam(w)==="blue"?"b":"r");
     who.textContent=tName(w)+" menang";
-    act.textContent="Seri selesai "+S.score[w]+"–"+S.score[otherTeam(w)];
-    $("hint").textContent="Tekan Reset seri buat mulai dari nol. GBP bakal dikosongin, nama tim tetap.";
+    act.textContent="Seri selesai "+S.score[w]+"\u2013"+S.score[otherTeam(w)];
+    tip="Tekan Reset seri buat mulai dari nol. GBP bakal dikosongin, nama tim tetap.";
   }else if(!d.started){
     t.className="turn idle"; who.textContent="Belum mulai";
-    $("hint").textContent=archive()
+    tip=archive()
       ? "Mode arsip: isi pick dua tim tanpa ban dan tanpa urutan. Tekan Mulai game."
       : tName(teamOnSide("blue"))+" di sisi biru, jadi mereka yang first pick. Tekan Tukar sisi kalau kebalik.";
   }else if(archive()){
     const n=pickCount();
     t.className="turn idle"; who.textContent="Mode arsip";
     act.textContent=n+" dari 10 pick";
-    $("hint").textContent = d.target==null
+    tip = d.target==null
       ? "Semua slot keisi. Tentukan pemenangnya di bawah."
-      : "Klik slot pick buat milih, terus klik heronya. Klik slot yang udah keisi buat kosongin.";
+      : (n===0?"Klik slot pick buat milih, terus klik heronya. Klik slot yang udah keisi buat kosongin.":"");
   }else if(d.done){
     t.className="turn idle"; who.textContent="Draft selesai";
     act.textContent="Tentukan pemenang";
-    $("hint").textContent="Pilih pemenang game ini. 5 pick tiap tim langsung kekunci GBP, dan sisi otomatis tukar buat game berikutnya.";
+    tip="5 pick tiap tim langsung kekunci GBP, dan sisi otomatis tukar buat game berikutnya.";
   }else{
     const st=SEQ[d.step], side=sideOf(st.s);
     t.className="turn "+(side==="blue"?"b":"r");
     who.textContent=tName(teamOnSide(side));
     const n=d.slots.slice(0,d.step).filter((x,i)=>SEQ[i].p===st.p&&sideOf(SEQ[i].s)===side).length+1;
-    act.textContent=(side==="blue"?"Biru":"Merah")+" · "+(st.p==="ban"?"Ban":"Pick")+" ke-"+n;
+    act.textContent=(st.p==="ban"?"Ban":"Pick")+" ke-"+n;
     stepN.textContent=(d.step+1)+"/18";
-    $("hint").textContent="Klik hero di panel kanan buat ngisi slot ini.";
   }
   t.appendChild(who);
   if(act.textContent) t.appendChild(act);
   if(stepN.textContent) t.appendChild(stepN);
+  hint.textContent=tip; hint.hidden=!tip;
   $("winq").hidden = archive() ? !(d.started&&pickCount()>0&&!S.over) : !(d.done&&!S.over);
   $("btnUndo").disabled = !d.started || (archive()?pickCount()===0:d.step===0);
   $("winB").textContent=tName(teamOnSide("blue"));
@@ -2034,58 +2023,49 @@ function renderSaveBar(){
   $("btnArchive").hidden=!linked.length;
 }
 
-function thumb(id,ban){
-  const h=byId.get(id)||null;
-  const d=document.createElement("div"); d.className="gth"+(ban?" ban":"");
-  d.appendChild(portrait(h));
-  if(h) d.title=(ban?"Ban: ":"")+h.name;
-  return d;
-}
-function strip(ids,label,ban,legacy){
-  const wrap=document.createElement("div"); wrap.className="gset";
-  const k=document.createElement("span"); k.className="k"; k.textContent=label; wrap.appendChild(k);
-  if(legacy){ const e=document.createElement("span"); e.className="gnone"; e.textContent="tidak tercatat";
-    e.title="Game ini dimainkan sebelum ban mulai disimpan"; wrap.appendChild(e); return wrap; }
-  const row=document.createElement("div"); row.className="gthumbs";
-  (ids||[]).forEach(id=>{
-    if(ban){ row.appendChild(thumb(id,true)); return; }
-    const h=byId.get(id)||{name:id};
-    const col=document.createElement("div"); col.className="gpick";
-    col.appendChild(thumb(id,false));
-    const n=document.createElement("span"); n.className="pn2"; n.textContent=h.name; n.title=h.name;
-    col.appendChild(n); row.appendChild(col);
-  });
-  if(!(ids||[]).length){ const e=document.createElement("span"); e.className="gnone"; e.textContent="kosong"; row.appendChild(e); }
-  wrap.appendChild(row); return wrap;
-}
+/* Satu baris per game, nempel tanpa kartu sendiri-sendiri, dan kolomnya
+   dipatok ke TIM bukan ke sisi — biar sekali lihat ketahuan tiap tim udah
+   kepake hero apa aja sepanjang seri. Ban nggak ditulis: yang dicari di
+   sini pool pick, dan ban cuma bikin barisnya dua kali lebih panjang. */
 function renderGames(){
   const box=$("gpv"); box.textContent="";
-  S.results.forEach(r=>{
-    const noBans = r.blueBans===undefined && r.redBans===undefined;
-    const arsip = r.mode==="arsip";
-    const card=document.createElement("div"); card.className="gcard";
-    const head=document.createElement("div"); head.className="gh";
-    const b=document.createElement("b"); b.textContent="Game "+r.game+(arsip?" · arsip":"");
-    const w=document.createElement("span"); w.className="w";
-    w.textContent=tName(r.winner)+" menang · sisi "+(r.winner===r.blueTeam?"biru":"merah");
-    head.append(b,w); card.appendChild(head);
+  if(!S.results.length) return;
 
-    const teams=document.createElement("div"); teams.className="gteams";
-    const redTeam=r.blueTeam==="t1"?"t2":"t1";
-    [[r.blueTeam,"Biru",r.blueBans,r.blue],[redTeam,"Merah",r.redBans,r.red]].forEach(([t,sideLbl,bans,picks])=>{
-      const col=document.createElement("div"); col.className="gteam";
-      const who=document.createElement("div"); who.className="gt";
-      const tn=document.createElement("span"); tn.className="tn"; tn.textContent=tName(t); tn.title=tName(t);
-      const sc=document.createElement("span");
-      sc.className="sidechip "+(sideLbl==="Biru"?"b":"r"); sc.textContent=sideLbl;
-      who.append(tn,sc); col.appendChild(who);
-      const sets=document.createElement("div"); sets.className="gsets";
-      if(!arsip) sets.appendChild(strip(bans,"Ban",true,noBans));
-      sets.appendChild(strip(picks,"Pick",false,false));
-      col.appendChild(sets); teams.appendChild(col);
+  const head=document.createElement("div"); head.className="grow ghead";
+  const hg=document.createElement("span"); hg.className="gno"; hg.textContent="";
+  const h1=document.createElement("span"); h1.className="gtn"; h1.textContent=tName("t1");
+  const h2=document.createElement("span"); h2.className="gtn"; h2.textContent=tName("t2");
+  const hw=document.createElement("span"); hw.className="gw"; hw.textContent="Menang";
+  head.append(hg,h1,h2,hw); box.appendChild(head);
+
+  S.results.forEach(r=>{
+    const row=document.createElement("div"); row.className="grow";
+    const no=document.createElement("span"); no.className="gno";
+    const b=document.createElement("b"); b.textContent="G"+r.game;
+    no.appendChild(b);
+    if(r.mode==="arsip"){ const a=document.createElement("i"); a.textContent="arsip"; no.appendChild(a); }
+    row.appendChild(no);
+
+    ["t1","t2"].forEach(team=>{
+      const mine=(r.blueTeam===team)?r.blue:r.red;
+      const side=(r.blueTeam===team)?"b":"r";
+      const cell=document.createElement("div"); cell.className="gpick";
+      const sc=document.createElement("span"); sc.className="sidedot "+side;
+      sc.title=side==="b"?"Sisi biru":"Sisi merah";
+      cell.appendChild(sc);
+      arr(mine).forEach(id=>{
+        const hh=byId.get(id)||{name:id,img:null};
+        const th=document.createElement("div"); th.className="gth"; th.title=hh.name;
+        th.appendChild(portrait(hh)); cell.appendChild(th);
+      });
+      if(!arr(mine).length){ const e=document.createElement("span"); e.className="gnone"; e.textContent="\u2014"; cell.appendChild(e); }
+      row.appendChild(cell);
     });
-    card.appendChild(teams);
-    box.appendChild(card);
+
+    const w=document.createElement("span"); w.className="gw "+(r.winner==="t1"?"t1":"t2");
+    w.textContent=tName(r.winner);
+    row.appendChild(w);
+    box.appendChild(row);
   });
 }
 
