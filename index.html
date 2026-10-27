@@ -351,13 +351,13 @@ html,body{height:100%}
    jadi aspect-ratio nggak kebawa dan barisnya kolaps ke tinggi teks kosong —
    kartunya numpuk. Kolom dan baris dipatok ke --tile biar dua-duanya pasti;
    sisa ruang dibagi ke jarak antar kolom, bukan ke ukuran kartunya. */
-.grid{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:2px;
+.grid{--tile:94px;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:2px;
   overflow-y:auto;padding:2px 4px 6px;scrollbar-width:thin}
 .gtiles{display:grid;
-  grid-template-columns:repeat(auto-fill,var(--tile,94px));
-  grid-auto-rows:var(--tile,94px);
+  grid-template-columns:repeat(auto-fill,var(--tile));
+  grid-auto-rows:var(--tile);
   justify-content:space-between;
-  gap:8px;align-content:start}
+  gap:clamp(5px,calc(var(--tile)*.085),10px);align-content:start}
 .gsec{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
 .gsec:last-child{margin-bottom:0}
 /* judul lane: tipis, nggak nyuri perhatian dari heronya */
@@ -367,45 +367,53 @@ html,body{height:100%}
 .dens button{border-radius:999px;width:28px;height:26px;font-size:11.5px;font-weight:800;color:var(--ink-dim);transition:background .16s,color .16s}
 .dens button:hover{color:var(--ink)}
 .dens button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
-.hc{position:relative;aspect-ratio:1/1;border-radius:16px;overflow:hidden;background:var(--sunk);
+/* Semua ukuran di dalam kartu diturunin dari --tile, jadi pas ukuran kartunya
+   dikecilin tulisan sama badge-nya ikut mengecil — bukan tetep gede dan nutupin
+   gambarnya. clamp() nahan biar nggak ada yang mengecil sampe nggak kebaca. */
+.hc{position:relative;aspect-ratio:1/1;border-radius:calc(var(--tile,94px)*.17);overflow:hidden;background:var(--sunk);
   box-shadow:var(--lift-sm);transition:transform .12s,box-shadow .16s;padding:0}
 
 .hc .ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
 .hc .ph img{width:100%;height:100%;object-fit:cover;display:block}
-.hc .mono{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.03em;text-shadow:0 1px 4px rgba(0,0,0,.35)}
-.hc .cn{position:absolute;left:0;right:0;bottom:0;padding:18px 6px 6px;font-size:11.5px;font-weight:700;
+.hc .mono{font-size:calc(var(--tile,94px)*.28);font-weight:800;color:#fff;letter-spacing:-.03em;text-shadow:0 1px 4px rgba(0,0,0,.35)}
+.hc .cn{position:absolute;left:0;right:0;bottom:0;
+  padding:calc(var(--tile,94px)*.19) 4px calc(var(--tile,94px)*.065);
+  font-size:clamp(8px,calc(var(--tile,94px)*.122),13px);font-weight:700;
   line-height:1.15;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);
   background:linear-gradient(to top,rgba(0,0,0,.86),rgba(0,0,0,.52) 55%,transparent);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
-/* three glows: gold = priority, red = counter in play, blue = combo in play.
-   Ring takes the strongest contextual signal; badges stack so nothing is hidden. */
-.hc.glow{box-shadow:0 0 0 2.5px var(--ring),0 0 18px var(--sheenc),var(--lift-sm)}
-.hc.glow::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:linear-gradient(115deg,transparent 34%,var(--sheenc) 46%,transparent 58%);
-  background-size:300% 100%;animation:sheen 2.8s linear infinite}
-@keyframes sheen{from{background-position:140% 0}to{background-position:-60% 0}}
+/* Cuma dua cincin yang tersisa, dua-duanya nandain kondisi yang nggak berubah-ubah
+   tiap langkah: kuning = prioritas kita, ungu = andalan lawan. Counter sama combo
+   berubah tiap kali ada yang kepick, jadi dia cukup badge huruf di pojok —
+   kalau dikasih cincin juga, galerinya jadi diskotik. */
+.hc.glow{box-shadow:0 0 0 2.5px var(--ring),0 0 14px var(--sheenc),var(--lift-sm)}
 .hc.gl-prio{--ring:var(--prio);--sheenc:var(--prio-glow)}
-.hc.gl-ctr{--ring:var(--ctr);--sheenc:var(--ctr-glow)}
-.hc.gl-cmb{--ring:var(--cmb);--sheenc:var(--cmb-glow)}
-.hc .marks{position:absolute;top:4px;right:4px;z-index:3;display:flex;flex-direction:column;gap:3px;align-items:flex-end}
-.mk{min-width:18px;height:18px;padding:0 5px;border-radius:999px;font-size:10px;font-weight:800;
+.hc .marks{position:absolute;top:clamp(3px,calc(var(--tile,94px)*.042),6px);right:clamp(3px,calc(var(--tile,94px)*.042),6px);
+  z-index:3;display:flex;flex-direction:column;gap:calc(var(--tile,94px)*.032);align-items:flex-end}
+.mk{min-width:clamp(13px,calc(var(--tile,94px)*.19),22px);height:clamp(13px,calc(var(--tile,94px)*.19),22px);
+  padding:0 clamp(3px,calc(var(--tile,94px)*.053),7px);border-radius:999px;
+  font-size:clamp(7.5px,calc(var(--tile,94px)*.106),12px);font-weight:800;
   display:grid;place-items:center;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.45)}
 .mk.p{background:var(--prio);color:#2a1f05}
 .mk.c{background:var(--ctr);color:#fff}
 .mk.k{background:var(--cmb);color:#fff}
 .hc.glow.off,.hc.glow.locked,.hc.glow.waste{box-shadow:var(--lift-sm)}
-.hc.glow.off::before,.hc.glow.locked::before,.hc.glow.waste::before{display:none}
 .hc:hover:not(.off):not(.locked){transform:translateY(-2px);box-shadow:var(--lift-lg)}
-.hc.glow:hover:not(.off):not(.locked){box-shadow:0 0 0 2.5px var(--ring),0 0 26px var(--sheenc),var(--lift-lg)}
+.hc.glow:hover:not(.off):not(.locked){box-shadow:0 0 0 2.5px var(--ring),0 0 20px var(--sheenc),var(--lift-lg)}
 
 .legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:11px;
   background:var(--track);border-radius:999px;padding:8px 16px;font-size:11.5px;font-weight:700;color:var(--ink-mid)}
 .legend i{display:inline-flex;align-items:center;gap:6px;font-style:normal;white-space:nowrap}
+/* p sama s digambar bunder karena itu emang cincin di kartunya;
+   c sama k digambar badge huruf karena di kartunya juga badge huruf. */
 .legend i::before{content:"";width:11px;height:11px;border-radius:50%;flex:0 0 auto}
 .legend i.p::before{background:var(--prio);box-shadow:0 0 7px var(--prio-glow)}
-.legend i.c::before{background:var(--ctr);box-shadow:0 0 7px var(--ctr-glow)}
-.legend i.k::before{background:var(--cmb);box-shadow:0 0 7px var(--cmb-glow)}
 .legend i.s::before{background:var(--scout);box-shadow:0 0 7px var(--scout-glow)}
+.legend i.c::before,.legend i.k::before{width:auto;min-width:15px;height:15px;padding:0 4px;
+  border-radius:999px;color:#fff;font-size:9.5px;font-weight:800;display:grid;place-items:center;
+  line-height:1;box-shadow:none}
+.legend i.c::before{content:"C";background:var(--ctr)}
+.legend i.k::before{content:"K";background:var(--cmb)}
 .hc.off{opacity:.26;cursor:not-allowed}
 .hc.off .ph::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,transparent 45%,#fff 46%,#fff 54%,transparent 55%);opacity:.5}
 /* a ban the opponent is already locked out of: dimmed and labelled, still clickable */
@@ -864,10 +872,11 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .roomwho{font-size:11.5px;color:var(--ink-dim)}
 .roomwho.on{color:var(--ok);font-weight:700}
 .hc.gbp .ph{filter:grayscale(1) contrast(.9);opacity:.45}
-.hc .mk.l{background:var(--lock-tint);color:var(--lock);font-size:8px;letter-spacing:.06em;
-  padding:2px 5px;border-radius:999px;font-weight:800;font-style:normal}
-.hc .mk.w{background:var(--red-tint);color:var(--red-deep);font-size:7.5px;letter-spacing:.04em;
-  padding:2px 5px;border-radius:999px;font-weight:800;font-style:normal;white-space:nowrap}
+.hc .mk.l,.hc .mk.w{font-size:clamp(6.5px,calc(var(--tile,94px)*.085),10px);letter-spacing:.05em;
+  padding:0 clamp(3px,calc(var(--tile,94px)*.053),7px);border-radius:999px;
+  font-weight:800;font-style:normal;white-space:nowrap}
+.hc .mk.l{background:var(--lock-tint);color:var(--lock)}
+.hc .mk.w{background:var(--red-tint);color:var(--red-deep)}
 /* ban ke hero yang udah kekunci GBP lawan itu ban kebuang — diabuin,
    persis permintaan di tab Scrim */
 .hc.waste .ph{filter:grayscale(1) contrast(.9);opacity:.5}
@@ -909,10 +918,11 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 
 /* ---- scouting lawan ---- */
 .hc.gl-str{--ring:var(--scout);--sheenc:var(--scout-glow)}
-.hc .mk.s{background:var(--scout);color:#fff;font-size:8px;letter-spacing:.02em;
-  padding:2px 5px;border-radius:999px;font-weight:800;font-style:normal;font-variant-numeric:tabular-nums}
-.hc .mk.wk{background:var(--sunk);color:var(--ink-dim);font-size:8px;
-  padding:2px 5px;border-radius:999px;font-weight:800;font-style:normal;font-variant-numeric:tabular-nums}
+.hc .mk.s,.hc .mk.wk{font-size:clamp(6.5px,calc(var(--tile,94px)*.085),10px);letter-spacing:.02em;
+  padding:0 clamp(3px,calc(var(--tile,94px)*.053),7px);border-radius:999px;
+  font-weight:800;font-style:normal;font-variant-numeric:tabular-nums}
+.hc .mk.s{background:var(--scout);color:#fff}
+.hc .mk.wk{background:var(--sunk);color:var(--ink-dim)}
 .scoutpick{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;
   background:var(--track);color:var(--ink-mid);margin-right:5px;transition:background .14s,color .14s}
 .scoutpick[aria-pressed="true"]{background:var(--scout);color:#fff}
@@ -1800,7 +1810,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="65f25153";   /* diisi pas build */
+const APP_VER="e5d93c07";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -2282,11 +2292,12 @@ function renderGrid(){
 
     const nc=G.counter[h.id]||0, nk=G.combo[h.id]||0, live=st==="free"||st==="wasteban";
     const sc=SC.strong[h.id], sw=SC.weak[h.id];
-    /* andalan lawan dapet cincinnya sendiri dan menang dari counter/combo:
-       pas fase ban, ini yang paling nentuin */
-    const ring = (live&&sc) ? "gl-str" : (live&&nc) ? "gl-ctr" : (live&&nk) ? "gl-cmb" : h.prio ? "gl-prio" : null;
+    /* Cincin cuma buat dua hal yang nggak berubah tiap langkah: andalan lawan
+       (ungu, menang) sama prioritas kita (kuning). Counter/combo berubah terus
+       tiap ada yang kepick, jadi dia cukup badge C/K di pojok. */
+    const ring = (live&&sc) ? "gl-str" : h.prio ? "gl-prio" : null;
     b.classList.toggle("glow",!!ring);
-    ["gl-ctr","gl-cmb","gl-prio","gl-str"].forEach(c=>b.classList.toggle(c,c===ring));
+    ["gl-prio","gl-str"].forEach(c=>b.classList.toggle(c,c===ring));
 
     const marks=b.querySelector(".marks"); marks.textContent="";
     const addMark=(cls,txt)=>{ const s=document.createElement("span"); s.className="mk "+cls; s.textContent=txt; marks.appendChild(s); };
@@ -3439,7 +3450,7 @@ function renderRelGrid(){
     const passF = relFilter==="all" ? true : relFilter==="prio" ? !!h.prio : h.lanes.includes(relFilter);
     b.hidden=!(passF && (!q||norm(h.name).includes(q)));
     if(!b.hidden) shown++;
-    b.classList.remove("off","locked","waste","gl-ctr","gl-cmb");
+    b.classList.remove("off","locked","waste");
     b.classList.toggle("glow",!!h.prio);
     b.classList.toggle("gl-prio",!!h.prio);
     b.classList.toggle("inlist",armed.includes(h.id));
@@ -4048,6 +4059,11 @@ function simGlow(){
   const mine=simPicksOf(side), theirs=simPicksOf(foe);
   const beats = st.p==="pick" ? theirs : mine;
   const withWho = st.p==="pick" ? mine : theirs;
+  /* saringan lane yang sama kayak tab Scrim — sebelumnya ok() dipanggil di sini
+     tapi nggak pernah dibikin, jadi simGlow() selalu ngelempar error dan
+     seluruh render grid Simulasi ikut mati di tengah jalan */
+  const open=openLanes(st.p==="pick"?mine:theirs);
+  const ok=id=>laneFree(id,open);
   beats.forEach(id=>{ const t=byId.get(id); if(!t) return;
     arr(t.weak).forEach(c=>{ if(ok(c)) counter[c]=(counter[c]||0)+1; }); });
   withWho.forEach(p=>{ const h=byId.get(p); if(!h) return;
@@ -4085,15 +4101,21 @@ function simRenderGrid(){
     el.classList.toggle("off",dead);
     el.classList.toggle("gbp",st==="locked");
     el.classList.toggle("waste",st==="wasteban");
-    el.classList.toggle("gl-prio",!!h.prio&&!dead);
-    el.classList.toggle("gl-ctr",!!G.counter[h.id]&&!dead);
-    el.classList.toggle("gl-cmb",!!G.combo[h.id]&&!dead);
+    /* dulu kelas cincinnya dipasang tanpa .glow, jadi di Simulasi nggak pernah
+       kelihatan sama sekali — sekarang disamain sama tab Scrim */
+    const nc=G.counter[h.id]||0, nk=G.combo[h.id]||0, lit=!!h.prio&&!dead;
+    el.classList.toggle("glow",lit);
+    el.classList.toggle("gl-prio",lit);
     el.title = st==="locked" ? h.name+" \u2014 udah dipake tim ini, nggak bisa dipick lagi"
              : st==="wasteban" ? h.name+" \u2014 lawan udah kena GBP di hero ini, nggak perlu diban"
-             : st==="used" ? h.name+" \u2014 udah kepake di draft ini" : h.name;
+             : st==="used" ? h.name+" \u2014 udah kepake di draft ini"
+             : h.name+(nc||nk?" ("+[nc?"counter "+nc+" pick lawan":"",nk?"combo sama "+nk+" pick sendiri":""].filter(Boolean).join(", ")+")":"");
     const mk=el.querySelector(".marks"); if(mk){ mk.textContent="";
-      if(st==="locked"){ const s=document.createElement("i"); s.className="mk l"; s.textContent="GBP"; mk.appendChild(s); }
-      else if(h.prio){ const s=document.createElement("i"); s.className="mk p"; s.textContent="★"; mk.appendChild(s); } }
+      const add=(cls,txt)=>{ const s=document.createElement("i"); s.className="mk "+cls; s.textContent=txt; mk.appendChild(s); };
+      if(st==="locked") add("l","GBP");
+      else { if(h.prio) add("p","★");
+             if(!dead&&nc) add("c",nc>1?"C"+nc:"C");
+             if(!dead&&nk) add("k",nk>1?"K"+nk:"K"); } }
   });
   $("simEmpty").hidden=shown>0;
   syncHeads($("simGrid"),LANES.includes(simFilter));
@@ -4847,7 +4869,7 @@ $("grid").onclick=e=>{ const b=e.target.closest(".hc"); if(b) pickHero(b.dataset
 });
 $("hq").oninput=e=>{ hQuery=e.target.value; renderHeroList(); };
 
-const TILE={s:72,m:94,l:124};
+const TILE={s:60,m:94,l:124};
 function setDensity(v,save){
   const px=TILE[v]||TILE.m;
   $("grid").style.setProperty("--tile",px+"px");
