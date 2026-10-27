@@ -46,6 +46,8 @@ img{max-width:100%}
   --prio:#d79a16;
   --prio-tint:#fbeec6;
   --prio-glow:rgba(255,206,92,.55);
+  --scout:#8a4fbf;
+  --scout-glow:rgba(168,110,230,.55);
   --ctr:#d6433a;
   --ctr-glow:rgba(255,106,96,.5);
   --cmb:#2f7fd0;
@@ -81,6 +83,8 @@ img{max-width:100%}
     --prio:#ffc94d;
     --prio-tint:#3a2e12;
     --prio-glow:rgba(255,201,77,.55);
+    --scout:#c08ae8;
+    --scout-glow:rgba(192,138,232,.55);
     --ctr:#ff7a70;
     --ctr-glow:rgba(255,122,112,.5);
     --cmb:#5fb0ff;
@@ -115,6 +119,8 @@ img{max-width:100%}
   --prio:#ffc94d;
   --prio-tint:#3a2e12;
   --prio-glow:rgba(255,201,77,.55);
+  --scout:#c08ae8;
+  --scout-glow:rgba(192,138,232,.55);
   --ctr:#ff7a70;
   --ctr-glow:rgba(255,122,112,.5);
   --cmb:#5fb0ff;
@@ -891,6 +897,25 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .shnote{font-size:11px;color:var(--ink-dim);margin-left:9px}
 .gbp h3{display:inline}
 
+/* ---- scouting lawan ---- */
+.hc.gl-str{--ring:var(--scout);--sheenc:var(--scout-glow)}
+.hc .mk.s{background:var(--scout);color:#fff;font-size:8px;letter-spacing:.02em;
+  padding:2px 5px;border-radius:999px;font-weight:800;font-style:normal;font-variant-numeric:tabular-nums}
+.hc .mk.wk{background:var(--sunk);color:var(--ink-dim);font-size:8px;
+  padding:2px 5px;border-radius:999px;font-weight:800;font-style:normal;font-variant-numeric:tabular-nums}
+.scoutpick{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;
+  background:var(--track);color:var(--ink-mid);margin-right:5px;transition:background .14s,color .14s}
+.scoutpick[aria-pressed="true"]{background:var(--scout);color:#fff}
+.scoutg{font-size:11px;color:var(--ink-dim);margin-left:3px}
+.scout .thr{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-dim);white-space:nowrap}
+.scout .thr input{width:44px;background:var(--track);box-shadow:none;border-radius:8px;
+  padding:4px 7px;font-size:11.5px;font-weight:700;text-align:center;color:var(--ink)}
+.sughd .sp{flex:1 1 auto}
+.sugp.flat{cursor:default}
+.sugp.flat:hover{transform:none}
+.sugp .n.wl2{min-width:0;padding:0 5px;font-size:8.5px;background:var(--ink);color:var(--panel);
+  font-variant-numeric:tabular-nums;top:-5px;right:-5px}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(26px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:13px 26px;border-radius:999px;font-size:14px;font-weight:600;z-index:60;box-shadow:var(--lift-lg);animation:rise .22s ease-out;max-width:86vw;text-align:center}
 @keyframes rise{from{transform:translateX(-50%) translateY(10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -975,6 +1000,16 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
       <span class="sdot" id="saveDot"></span>
       <span class="stxt" id="saveInfo"></span>
       <button class="pill sm" id="btnArchive">Simpan ke tim</button>
+    </section>
+
+    <section class="card sug scout" id="scoutSect" hidden>
+      <div class="sughd">
+        <h3>Scouting</h3><span class="sugnote" id="scoutWho"></span>
+        <span class="sp"></span>
+        <label class="thr">min <input type="number" id="scoutMin" min="1" max="20" step="1" value="4"> game</label>
+        <label class="thr">menang ≥ <input type="number" id="scoutWr" min="50" max="95" step="5" value="60">%</label>
+      </div>
+      <div id="scoutBody"></div>
     </section>
 
     <section class="card sug" id="sugSect" hidden>
@@ -1750,7 +1785,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="8f046eaf";   /* diisi pas build */
+const APP_VER="cc823d2d";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -2125,7 +2160,7 @@ function glowMaps(){
 function renderGrid(){
   if(!gridBuilt) buildGrid();
   const q=norm(query); let shown=0;
-  const G=glowMaps();
+  const G=glowMaps(), SC=scoutMaps();
   const lg=$("legend");
   const anyRel=Object.keys(G.counter).length||Object.keys(G.combo).length;
   lg.hidden=!G.phase||!anyRel;
@@ -2145,17 +2180,24 @@ function renderGrid(){
     b.classList.toggle("waste",st==="wasteban");
 
     const nc=G.counter[h.id]||0, nk=G.combo[h.id]||0, live=st==="free"||st==="wasteban";
-    const ring = (live&&nc) ? "gl-ctr" : (live&&nk) ? "gl-cmb" : h.prio ? "gl-prio" : null;
+    const sc=SC.strong[h.id], sw=SC.weak[h.id];
+    /* andalan lawan dapet cincinnya sendiri dan menang dari counter/combo:
+       pas fase ban, ini yang paling nentuin */
+    const ring = (live&&sc) ? "gl-str" : (live&&nc) ? "gl-ctr" : (live&&nk) ? "gl-cmb" : h.prio ? "gl-prio" : null;
     b.classList.toggle("glow",!!ring);
-    ["gl-ctr","gl-cmb","gl-prio"].forEach(c=>b.classList.toggle(c,c===ring));
+    ["gl-ctr","gl-cmb","gl-prio","gl-str"].forEach(c=>b.classList.toggle(c,c===ring));
 
     const marks=b.querySelector(".marks"); marks.textContent="";
     const addMark=(cls,txt)=>{ const s=document.createElement("span"); s.className="mk "+cls; s.textContent=txt; marks.appendChild(s); };
+    if(live&&sc) addMark("s",sc.w+"\u2013"+(sc.p-sc.w));
+    else if(live&&sw) addMark("wk",sw.w+"\u2013"+(sw.p-sw.w));
     if(h.prio) addMark("p","★");
     if(live&&nc) addMark("c",nc>1?"C"+nc:"C");
     if(live&&nk) addMark("k",nk>1?"K"+nk:"K");
 
     const rel=[];
+    if(live&&sc) rel.push("andalan "+(scoutCache?scoutCache.team.name:"lawan")+": "+sc.p+" game, "+sc.w+"\u2013"+(sc.p-sc.w)+" ("+sc.wr+"%)");
+    if(live&&sw) rel.push("lemah di "+(scoutCache?scoutCache.team.name:"lawan")+": "+sw.p+" game, "+sw.w+"\u2013"+(sw.p-sw.w)+" ("+sw.wr+"%)");
     if(live&&nc) rel.push(G.phase==="pick"?"counter "+nc+" pick musuh":"counter "+nc+" pick lo");
     if(live&&nk) rel.push(G.phase==="pick"?"combo sama "+nk+" pick lo":"combo sama "+nk+" pick musuh");
     b.title = st==="locked" ? h.name+" kekunci GBP buat tim ini"
@@ -3515,7 +3557,7 @@ function recordWinner(side){
   queueSave(); renderDraft();
 }
 
-function renderDraft(){ renderMatch(); renderBoard(); renderSpine(); renderGrid(); renderSuggest(); }
+function renderDraft(){ renderMatch(); renderBoard(); renderSpine(); renderScout(); renderGrid(); renderSuggest(); }
 function render(){ renderDraft();
   if(view==="hero"){ renderHeroList(); renderMeters(); }
   if(view==="rel"){ renderRel(); renderRelGrid(); }
@@ -4372,6 +4414,183 @@ function verStart(){
 $("newVerGo").onclick=verApply;
 $("newVerNo").onclick=()=>{ $("newVer").hidden=true; };
 
+/* ──────────────────────────────────────────────────────────────
+   SCOUTING LAWAN
+
+   Ini bukan model yang nebak. Semuanya dihitung dari seri yang kamu
+   catet sendiri di tab Tim, dibaca dari sudut pandang LAWAN: di
+   catatan tim mereka, `mine` itu pick mereka dan `win` itu kemenangan
+   mereka. Jadi kalau IKIGAI baru kecatat dua seri, hasilnya ya tipis —
+   nggak ada yang bisa nambal catatan yang belum ada.
+
+   Tiga sinyal, dan ambangnya bisa diatur sendiri:
+     andalan  dipake >= min game DAN menang >= ambang  -> kandidat ban
+     lemah    dipake >= min game DAN menang <= (100-ambang) -> biarin
+     comfort  muncul di >= setengah game mereka -> ganggu rencananya
+
+   Diurutin dari JUMLAH MENANG, bukan persentase. 6 menang dari 8 game
+   itu bukti jauh lebih kuat daripada 3 dari 5, walau persentasenya
+   lebih kecil. Angka mentahnya selalu ikut ditulis supaya nggak ada
+   yang kebaca lebih pasti dari yang sebenarnya.
+   ────────────────────────────────────────────────────────────── */
+let scoutMin=4, scoutWr=60, scoutCache=null, scoutPick=null;
+
+function scoutLoad(){
+  try{
+    const a=parseInt(localStorage.getItem("hokdraft.scoutMin"),10);
+    const b=parseInt(localStorage.getItem("hokdraft.scoutWr"),10);
+    if(a>=1&&a<=20) scoutMin=a;
+    if(b>=50&&b<=95) scoutWr=b;
+  }catch(e){}
+  const mi=$("scoutMin"), wr=$("scoutWr");
+  if(mi) mi.value=scoutMin;
+  if(wr) wr.value=scoutWr;
+}
+function scoutSave(){
+  try{
+    localStorage.setItem("hokdraft.scoutMin",String(scoutMin));
+    localStorage.setItem("hokdraft.scoutWr",String(scoutWr));
+  }catch(e){}
+}
+
+/* Tim yang dipantau dipilih sekali dan nggak goyang sepanjang draft.
+   Dulu ini diikat ke "lawan dari tim yang lagi jalan", jadi panelnya
+   tukeran tiap langkah — padahal yang mau dipantau ya tim lawan yang itu
+   terus. Default-nya tim yang catatannya paling banyak, karena itu yang
+   paling ada isinya buat discouting. */
+function scoutTeamOf(k){
+  const id=S.link&&S.link[k];
+  return id?teams.find(x=>x.id===id):null;
+}
+function scoutKey(){
+  if(scoutPick&&scoutTeamOf(scoutPick)) return scoutPick;
+  const n=k=>{ const t=scoutTeamOf(k); if(!t) return -1;
+    return arr(t.history).reduce((a,h)=>a+gcount(h),0); };
+  const a=n("t1"), b=n("t2");
+  if(a<0&&b<0) return null;
+  return b>=a?"t2":"t1";
+}
+function scoutData(){
+  const key=scoutKey();
+  if(!key) return null;
+  const t=scoutTeamOf(key);
+  if(!t) return null;
+  const st=teamStats(t);
+  const G=st.games.w+st.games.l;
+  if(!G) return {team:t,games:0,strong:[],weak:[],comfort:[]};
+
+  const used=usedSet();
+  const theirGbp=new Set(arr(S.gbp&&S.gbp[key]));
+  const lo=100-scoutWr;
+  const strong=[], weak=[], comfort=[];
+  st.mine.forEach((e,id2)=>{
+    if(used.has(id2)||theirGbp.has(id2)) return;   /* percuma: udah kepake atau udah kekunci buat mereka */
+    const wr=pct(e.w,e.p);
+    if(e.p>=scoutMin&&wr>=scoutWr) strong.push([id2,e,wr]);
+    else if(e.p>=scoutMin&&wr<=lo) weak.push([id2,e,wr]);
+    if(e.p>=scoutMin&&e.p*2>=G) comfort.push([id2,e,wr]);
+  });
+  /* jumlah menang dulu, baru jumlah main, baru nama — biar 6-2 di atas 3-2 */
+  const byWins=(a,b)=>(b[1].w-a[1].w)||(b[1].p-a[1].p)||hName(a[0]).localeCompare(hName(b[0]));
+  const byLoss=(a,b)=>((b[1].p-b[1].w)-(a[1].p-a[1].w))||(b[1].p-a[1].p)||hName(a[0]).localeCompare(hName(b[0]));
+  const byPicks=(a,b)=>(b[1].p-a[1].p)||byWins(a,b);
+  strong.sort(byWins); weak.sort(byLoss); comfort.sort(byPicks);
+  return {team:t,games:G,strong,weak,comfort};
+}
+
+function scoutMaps(){
+  const s=scoutCache;
+  const strong={}, weak={};
+  if(s){
+    s.strong.forEach(([id,e,wr])=>{ strong[id]={p:e.p,w:e.w,wr}; });
+    s.weak.forEach(([id,e,wr])=>{ weak[id]={p:e.p,w:e.w,wr}; });
+  }
+  return {strong,weak};
+}
+
+function scoutRow(label,items,note,clickable){
+  const row=document.createElement("div"); row.className="sugrow";
+  const k=document.createElement("span"); k.className="k"; k.textContent=label;
+  row.appendChild(k);
+  if(!items.length){
+    const e=document.createElement("span"); e.className="sugempty"; e.textContent=note;
+    row.appendChild(e); return row;
+  }
+  const wrap=document.createElement("div"); wrap.className="sugs";
+  items.slice(0,10).forEach(([id,e,wr])=>{
+    const h=byId.get(id); if(!h) return;
+    const b=document.createElement(clickable?"button":"div");
+    if(clickable) b.type="button";
+    b.className="sugp"+(clickable?"":" flat");
+    b.title=h.name+" — "+e.p+" game, "+e.w+"–"+(e.p-e.w)+" ("+wr+"%)"
+      +(clickable?" · klik buat ban":"");
+    const box=document.createElement("div"); box.className="box2"; box.appendChild(portrait(h));
+    b.appendChild(box);
+    const n=document.createElement("span"); n.className="n wl2"; n.textContent=e.w+"–"+(e.p-e.w);
+    b.appendChild(n);
+    const nm=document.createElement("span"); nm.className="pn2"; nm.textContent=h.name;
+    b.appendChild(nm);
+    if(clickable) b.onclick=()=>pickHero(id);
+    wrap.appendChild(b);
+  });
+  row.appendChild(wrap);
+  return row;
+}
+
+function renderScout(){
+  const sect=$("scoutSect");
+  scoutCache=scoutData();
+  const s=scoutCache;
+  if(!s){ sect.hidden=true; return; }
+  sect.hidden=false;
+  const who=$("scoutWho"); who.textContent="";
+  /* dua tim kedaftar: kasih tombol biar bisa ganti yang dipantau */
+  const both=["t1","t2"].filter(k=>scoutTeamOf(k));
+  if(both.length>1){
+    const now=scoutKey();
+    both.forEach(k=>{
+      const t2=scoutTeamOf(k);
+      const b=document.createElement("button"); b.type="button"; b.className="scoutpick";
+      b.setAttribute("aria-pressed",String(k===now));
+      b.textContent=t2.name;
+      b.title="Pantau "+t2.name;
+      b.onclick=()=>{ scoutPick=k; renderScout(); renderGrid(); };
+      who.appendChild(b);
+    });
+  }else{
+    const n=document.createElement("span"); n.textContent=s.team.name; who.appendChild(n);
+  }
+  if(s.games){
+    const g=document.createElement("span"); g.className="scoutg";
+    g.textContent=s.games+" game kecatat"; who.appendChild(g);
+  }
+  const body=$("scoutBody"); body.textContent="";
+  if(!s.games){
+    const e=document.createElement("p"); e.className="sugempty";
+    e.textContent="Belum ada game "+s.team.name+" yang kecatat. Isi hasil scrim di tab Draft atau mode Arsip dulu.";
+    body.appendChild(e); return;
+  }
+  const d=S.draft;
+  const banning = d.started&&!d.done&&!S.over&&!archive()&&SEQ[d.step].p==="ban";
+  body.appendChild(scoutRow("Andalan mereka — kandidat ban",s.strong,
+    "Belum ada hero yang lolos ambang "+scoutMin+" game / "+scoutWr+"%.",banning));
+  body.appendChild(scoutRow("Sering dipake",s.comfort,
+    "Belum ada hero yang muncul di separo game mereka.",banning));
+  body.appendChild(scoutRow("Lemah — nggak usah diban",s.weak,
+    "Belum ada hero yang lolos ambang di sisi sebaliknya.",false));
+}
+
+$("scoutMin").onchange=()=>{
+  const v=parseInt($("scoutMin").value,10);
+  scoutMin=(v>=1&&v<=20)?v:4; $("scoutMin").value=scoutMin;
+  scoutSave(); renderScout(); renderGrid();
+};
+$("scoutWr").onchange=()=>{
+  const v=parseInt($("scoutWr").value,10);
+  scoutWr=(v>=50&&v<=95)?v:60; $("scoutWr").value=scoutWr;
+  scoutSave(); renderScout(); renderGrid();
+};
+
 /* ---- wiring ---- */
 Object.keys(FORMATS).forEach(k=>{
   const b=document.createElement("button"); b.dataset.v=k; b.textContent=k.toUpperCase();
@@ -4675,6 +4894,7 @@ renderTeamList();
 renderDraft();
 if(cached&&cached.S&&!restored) setTimeout(()=>toast("Model tim diperbarui — seri direset sekali."),400);
 verStart();
+scoutLoad();
 const h0=location.hash.replace("#","");
 setView(["hero","rel","board","team","sim"].includes(h0)?h0:"draft");
 
