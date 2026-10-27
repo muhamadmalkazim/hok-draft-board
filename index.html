@@ -1735,7 +1735,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="c5f94916";   /* diisi pas build */
+const APP_VER="d7760163";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -4240,8 +4240,12 @@ $("roomCode").oninput=e=>{ e.target.value=e.target.value.toUpperCase().replace(/
    yang lagi ngetik nggak pantes diputus di tengah. Selain itu,
    tombolnya yang muncul, biar dia yang mutusin kapan.
    ────────────────────────────────────────────────────────────── */
-const VER_POLL=240000;                       /* 4 menit */
-let verLatest=null, verTimer=null, verBusy=false;
+/* Sekali cek pakai HEAD doang — yang dibandingin cuma cap file dari
+   server (ETag / Last-Modified). Ngambil seluruh halaman tiap menit itu
+   200-an KB sekali, dan itu nggak sopan buat yang lagi pakai kuota.
+   Halaman penuhnya baru diambil kalau capnya emang berubah. */
+const VER_POLL=60000;
+let verLatest=null, verTimer=null, verBusy=false, verTag=null;
 
 function verSafeToReload(){
   const el=document.activeElement;
@@ -4250,33 +4254,53 @@ function verSafeToReload(){
   if(SIM&&SIM.slots.some(Boolean)) return false;
   return true;
 }
-function verShowBanner(){
-  const b=$("newVer"); if(!b) return;
-  b.hidden=false;
-}
+function verShowBanner(){ const b=$("newVer"); if(b) b.hidden=false; }
 function verApply(){
   try{ sessionStorage.setItem("hokdraft.reload",verLatest||""); }catch(e){}
   location.reload();
 }
+function verFound(v){
+  let tried=null; try{ tried=sessionStorage.getItem("hokdraft.reload"); }catch(e){}
+  verLatest=v;
+  if(tried===v){ verShowBanner(); return; }   /* udah coba, jangan muter-muter */
+  if(verSafeToReload()){ toast("Versi baru \u2014 memuat ulang\u2026"); setTimeout(verApply,650); }
+  else verShowBanner();
+}
 async function verCheck(){
-  if(verBusy||verLatest) return;   /* udah ketemu versi baru, tinggal nunggu dimuat */
+  if(verBusy||verLatest) return;
   verBusy=true;
   try{
-    const r=await fetch(location.pathname+"?v="+Date.now(),{cache:"no-store"});
+    const url=location.pathname+"?v="+Date.now();
+    /* Cek pertama ambil halaman penuh: capnya belum kita tau, tapi APP_VER
+       di halaman sendiri udah jadi pembanding yang pasti. Cek berikutnya
+       cukup HEAD, dan baru ngambil halaman penuh kalau capnya berubah. */
+    if(verTag!==null){
+      try{
+        const head=await fetch(url,{method:"HEAD",cache:"no-store"});
+        if(head.ok){
+          const tag=head.headers.get("etag")||head.headers.get("last-modified")||"";
+          if(tag&&tag===verTag) return;
+          if(tag) verTag=tag;
+        }
+      }catch(e){}                              /* HEAD ditolak? langsung GET */
+    }
+    const r=await fetch(url,{cache:"no-store"});
     if(!r.ok) return;
-    const t=await r.text();
-    const m=/APP_VER="([a-z0-9]+)"/i.exec(t);
-    if(!m||m[1]===APP_VER) return;
-    /* sekali gagal muat ulang ke versi yang sama, berhenti maksa */
-    let tried=null; try{ tried=sessionStorage.getItem("hokdraft.reload"); }catch(e){}
-    verLatest=m[1];
-    if(tried===verLatest){ verShowBanner(); return; }
-    if(verSafeToReload()){ toast("Versi baru — memuat ulang…"); setTimeout(verApply,650); }
-    else verShowBanner();
+    if(verTag===null)
+      verTag=r.headers.get("etag")||r.headers.get("last-modified")||"";
+    const m=/APP_VER="([a-z0-9]+)"/i.exec(await r.text());
+    if(m&&m[1]!==APP_VER) verFound(m[1]);
   }catch(e){}
   finally{ verBusy=false; }
 }
+/* Biar gampang mastiin lagi jalan di build mana tanpa nebak-nebak */
+function verStamp(){
+  try{ console.log("HOK Draft Board build "+APP_VER); }catch(e){}
+  const b=$("storeBadge");
+  if(b) b.title="Build "+APP_VER;
+}
 function verStart(){
+  verStamp();
   clearInterval(verTimer);
   verTimer=setInterval(verCheck,VER_POLL);
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden) verCheck(); });
