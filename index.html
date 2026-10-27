@@ -1818,7 +1818,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="582f23ad";   /* diisi pas build */
+const APP_VER="ae995b71";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -1955,10 +1955,19 @@ function compInto(el,title,picks){
   const h3=document.createElement("h3");
   h3.textContent=title;
   el.appendChild(h3);
-  const cov=new Set(); picks.forEach(h=>h.lanes.forEach(l=>cov.add(l)));
+  /* Dulu ini nyalain SEMUA lane yang bisa dipegang tiap hero, jadi 3 pick bisa
+     bikin 5 lane kelihatan keisi — nggak nyambung sama yang diredupin di
+     galeri. Sekarang dua-duanya baca laneAssign yang sama. */
+  const taken=laneAssign(picks);
+  const cov=new Set(taken.keys());
 
   const lanes=document.createElement("div"); lanes.className="lanes";
-  LANES.forEach(l=>{ const s=document.createElement("span"); s.className="ln"+(cov.has(l)?" on":""); s.textContent=LN[l]; lanes.appendChild(s); });
+  LANES.forEach(l=>{ const s=document.createElement("span");
+    const h=taken.get(l);
+    s.className="ln"+(h?" on":"");
+    s.textContent=LN[l];
+    s.title=h?LN[l]+": "+h.name:LN[l]+" masih kosong";
+    lanes.appendChild(s); });
   el.appendChild(lanes);
 
   const p=picks.filter(h=>h.dmg==="physical").length, m=picks.filter(h=>h.dmg==="magic").length, u=picks.length-p-m;
@@ -2234,12 +2243,24 @@ function buildGrid(){
    data yang emang belum ada.
    ────────────────────────────────────────────────────────────── */
 function lanesOf(h){ return h?arr(h.lanes).filter(l=>LANES.includes(l)):[]; }
+/* SATU sumber kebenaran soal "lane mana yang udah keisi".
+   Tiap hero cuma ngisi SATU lane, bukan semua lane yang dia bisa — lima pick
+   isinya lima lane. Hero yang pilihan lane-nya paling sedikit dikasih jatah
+   duluan (dia yang paling nggak bisa geser), terus tiap hero ngambil lane
+   pertama di daftarnya yang masih kosong. Lane pertama di data lo itu lane
+   utamanya, dan itu juga yang nentuin dia masuk bagian mana di galeri —
+   jadi yang dicoret selalu lane yang lo lihat di galeri.
+   Hero yang lane-nya belum diisi nggak nyoret apa-apa. */
+function laneAssign(hs){
+  const out=new Map();
+  arr(hs).filter(Boolean)
+    .map(h=>({h,ls:lanesOf(h)})).filter(x=>x.ls.length)
+    .sort((a,b)=>a.ls.length-b.ls.length)
+    .forEach(({h,ls})=>{ const f=ls.find(l=>!out.has(l)); if(f) out.set(f,h); });
+  return out;
+}
 function openLanes(picks){
-  const taken=new Set();
-  arr(picks).map(id=>byId.get(id)).filter(Boolean)
-    .map(lanesOf).filter(ls=>ls.length)
-    .sort((a,b)=>a.length-b.length)
-    .forEach(ls=>{ const f=ls.find(l=>!taken.has(l)); if(f) taken.add(f); });
+  const taken=laneAssign(arr(picks).map(id=>byId.get(id)));
   return LANES.filter(l=>!taken.has(l));
 }
 function laneFree(id,open){
