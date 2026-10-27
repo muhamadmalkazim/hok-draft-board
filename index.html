@@ -688,7 +688,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
   font-variant-numeric:tabular-nums;padding-left:6px}
 .dhsub .dim{color:var(--ink-dim)}
 
-.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
 .tile{background:var(--track);border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;
   justify-content:center;gap:1px;aspect-ratio:1/1;min-width:86px;border-left:3px solid transparent}
 .tile.blue{border-left-color:var(--blue)}
@@ -1733,7 +1733,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="dca2ccba";   /* diisi pas build */
+const APP_VER="5e6dd291";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -2651,7 +2651,10 @@ function teamStats(t){
     mine:new Map(),        /* hero kami: p = dipake, w = kami menang */
     foes:new Map(),        /* per lawan */
     roles:new Map(),       /* lane -> Map(heroId -> {p,w}) */
-    form:[],               /* urutan hasil game, paling lama dulu */
+    /* Satu kotak = satu seri, bukan satu game. Lawan HYVE 1–3 itu SATU
+       kekalahan, bukan tiga merah satu ijo — rincian per game-nya udah
+       ada di blue/red side dan di riwayat. */
+    form:[],               /* hasil per seri, paling lama dulu */
     picks:0, lastAt:0
   };
   hist.forEach(h=>{
@@ -2661,10 +2664,10 @@ function teamStats(t){
     const f=S.foes.get(key)||{sw:0,sl:0,gw:0,gl:0,lastAt:0};
     h.win?f.sw++:f.sl++; if(h.at>f.lastAt) f.lastAt=h.at;
     S.foes.set(key,f);
+    S.form.push({win:!!h.win,vs:key,at:h.at,score:h.score||""});
     arr(h.games).forEach(g=>{
       g.win?S.games.w++:S.games.l++;
       g.win?f.gw++:f.gl++;
-      S.form.push({win:!!g.win,vs:key,at:h.at,g:g.g});
       const sd=S.side[g.side]; if(sd){ sd.g++; if(g.win) sd.w++; }
       arr(g.mine).forEach(id=>{
         const e=S.mine.get(id)||{p:0,w:0}; e.p++; if(g.win) e.w++; S.mine.set(id,e);
@@ -2897,9 +2900,6 @@ function renderTeamDetail(t){
     rs.g?rs.w+"–"+(rs.g-rs.w)+" · "+rs.g+"g"+thin(rs.g):"—","red"));
   tiles.appendChild(statTile("Pool",s.mine.size?String(s.mine.size):"—",
     s.picks?s.picks+" pick":"—"));
-  const top5=rank(s.mine).slice(0,5).reduce((a,[,e])=>a+e.p,0);
-  tiles.appendChild(statTile("5 teratas",s.picks?pct(top5,s.picks)+"%":"—",
-    s.picks?"dari pick":"—"));
   top.append(idb,tiles);
   d.appendChild(top);
 
