@@ -351,11 +351,18 @@ html,body{height:100%}
    jadi aspect-ratio nggak kebawa dan barisnya kolaps ke tinggi teks kosong —
    kartunya numpuk. Kolom dan baris dipatok ke --tile biar dua-duanya pasti;
    sisa ruang dibagi ke jarak antar kolom, bukan ke ukuran kartunya. */
-.grid{flex:1 1 auto;min-height:0;display:grid;
+.grid{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:2px;
+  overflow-y:auto;padding:2px 4px 6px;scrollbar-width:thin}
+.gtiles{display:grid;
   grid-template-columns:repeat(auto-fill,var(--tile,94px));
   grid-auto-rows:var(--tile,94px);
   justify-content:space-between;
-  gap:8px;align-content:start;overflow-y:auto;padding:2px 4px 6px;scrollbar-width:thin}
+  gap:8px;align-content:start}
+.gsec{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.gsec:last-child{margin-bottom:0}
+/* judul lane: tipis, nggak nyuri perhatian dari heronya */
+.ghead{margin:0 2px;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:800;color:var(--ink-dim);opacity:.7}
 .dens{display:flex;background:var(--track);border-radius:999px;padding:3px;gap:2px}
 .dens button{border-radius:999px;width:28px;height:26px;font-size:11.5px;font-weight:800;color:var(--ink-dim);transition:background .16s,color .16s}
 .dens button:hover{color:var(--ink)}
@@ -398,6 +405,7 @@ html,body{height:100%}
 .legend i.p::before{background:var(--prio);box-shadow:0 0 7px var(--prio-glow)}
 .legend i.c::before{background:var(--ctr);box-shadow:0 0 7px var(--ctr-glow)}
 .legend i.k::before{background:var(--cmb);box-shadow:0 0 7px var(--cmb-glow)}
+.legend i.s::before{background:var(--scout);box-shadow:0 0 7px var(--scout-glow)}
 .hc.off{opacity:.26;cursor:not-allowed}
 .hc.off .ph::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,transparent 45%,#fff 46%,#fff 54%,transparent 55%);opacity:.5}
 /* a ban the opponent is already locked out of: dimmed and labelled, still clickable */
@@ -1090,8 +1098,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
         </div>
         <div class="legend" id="legend" hidden>
           <i class="p">★ Prioritas</i>
-          <i class="c" id="legC">Counter</i>
-          <i class="k" id="legK">Combo</i>
+          <i class="c" id="legC">Counter pick musuh</i>
+          <i class="k" id="legK">Combo sama pick lo</i>
+          <i class="s" id="legS" hidden>Andalan lawan</i>
         </div>
         <div class="grid" id="grid"></div>
       </section>
@@ -1791,7 +1800,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="1a6b5304";   /* diisi pas build */
+const APP_VER="65f25153";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -2129,18 +2138,63 @@ function renderGames(){
 const heroOrder=(a,b)=>(a.offmeta?1:0)-(b.offmeta?1:0)
   ||(b.prio?1:0)-(a.prio?1:0)
   ||a.name.localeCompare(b.name);
+/* ──────────────────────────────────────────────────────────────
+   Galeri hero dibagi per lane.
+
+   Hero multi-lane ditaro di lane pertamanya doang — satu hero muncul
+   sekali, biar nggak ada yang keitung dua kali waktu nyari. Di dalam
+   tiap lane urutannya tetep: prioritas dulu, gameta paling belakang.
+
+   Judul lane-nya ikut kesaring: kalau semua hero di lane itu kesaring
+   sama pencarian atau filter, judulnya ikut ilang, jadi nggak ada
+   kepala kosong yang nyangkut.
+   ────────────────────────────────────────────────────────────── */
+function gallerySections(){
+  const byLane=new Map(LANES.map(l=>[l,[]]));
+  const none=[];
+  heroes.forEach(h=>{
+    const l=lanesOf(h)[0];
+    if(l&&byLane.has(l)) byLane.get(l).push(h); else none.push(h);
+  });
+  const out=LANES.map(l=>({lane:l,name:LN[l],list:byLane.get(l).sort(heroOrder)}));
+  if(none.length) out.push({lane:"none",name:"Lane belum diisi",list:none.sort(heroOrder)});
+  return out.filter(s=>s.list.length);
+}
+/* Tiap lane punya grid-nya sendiri. Awalnya judulnya gue taro sebagai
+   item di satu grid besar, tapi barisnya dipatok setinggi kotak hero —
+   jadi tiap judul makan ruang setinggi satu hero. Dipisah per bagian,
+   judulnya setinggi teks doang. */
+function emitGallery(g,tile){
+  g.textContent="";
+  gallerySections().forEach(s=>{
+    const sec=document.createElement("div"); sec.className="gsec"; sec.dataset.lane=s.lane;
+    const hd=document.createElement("p"); hd.className="ghead"; hd.textContent=s.name;
+    const box=document.createElement("div"); box.className="gtiles";
+    s.list.forEach(h=>box.appendChild(tile(h)));
+    sec.append(hd,box); g.appendChild(sec);
+  });
+}
+/* hideAll dipakai waktu filter lane lagi nyala: nama filternya udah
+   ngasih tau lagi ngeliat apa, dan hero multi-lane bikin judulnya
+   kelihatan aneh (hero clash nongol di bawah judul Clash padahal yang
+   difilter Jungle) */
+function syncHeads(g,hideAll){
+  g.querySelectorAll(".gsec").forEach(sec=>{
+    const n=[...sec.querySelectorAll(".hc")].filter(e=>!e.hidden).length;
+    sec.hidden=!n;
+    const hd=sec.querySelector(".ghead");
+    if(hd) hd.hidden=hideAll;
+  });
+}
+
 function buildGrid(){
-  const g=$("grid"); g.textContent="";
-  /* priority heroes lead the gallery so they are the first thing seen in a ban phase */
-  /* prioritas di depan, gameta ditendang ke belakang — biar pas ngeliat
-     seluruh hero, yang jarang kepick nggak nyampur sama yang umum */
-  const ordered=heroes.slice().sort(heroOrder);
-  ordered.forEach(h=>{
+  const g=$("grid");
+  emitGallery(g,h=>{
     const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
     b.appendChild(portrait(h));
     const mk=document.createElement("span"); mk.className="marks"; b.appendChild(mk);
     const n=document.createElement("span"); n.className="cn"; n.textContent=h.name; b.appendChild(n);
-    g.appendChild(b);
+    return b;
   });
   const e=document.createElement("p"); e.className="gridempty"; e.id="gridEmpty"; e.hidden=true;
   e.textContent="Nggak ada hero yang cocok.";
@@ -2204,12 +2258,18 @@ function renderGrid(){
   const G=glowMaps(), SC=scoutMaps();
   const lg=$("legend");
   const anyRel=Object.keys(G.counter).length||Object.keys(G.combo).length;
-  lg.hidden=!G.phase||!anyRel;
+  const anyScout=Object.keys(SC.strong).length;
+  $("legC").hidden=!Object.keys(G.counter).length;
+  $("legK").hidden=!Object.keys(G.combo).length;
+  const ls=$("legS");
+  ls.hidden=!anyScout;
+  if(anyScout&&scoutCache) ls.textContent="Andalan "+scoutCache.team.name;
+  lg.hidden=!(anyRel||anyScout);
   if(!lg.hidden){
     $("legC").textContent = G.phase==="pick" ? "Counter pick musuh" : "Counter pick lo — kandidat ban";
     $("legK").textContent = G.phase==="pick" ? "Combo sama pick lo" : "Combo buat musuh — kandidat ban";
   }
-  [...$("grid").children].forEach(b=>{
+  [...$("grid").querySelectorAll(".hc")].forEach(b=>{
     if(!b.dataset.id) return;
     const h=byId.get(b.dataset.id); if(!h){ b.hidden=true; return; }
     const passF = filter==="all" ? true : filter==="prio" ? !!h.prio : h.lanes.includes(filter);
@@ -2252,6 +2312,7 @@ function renderGrid(){
     b.querySelector(".cn").textContent=h.name;
   });
   $("gridEmpty").hidden=shown>0;
+  syncHeads($("grid"),LANES.includes(filter));
   $("galCount").textContent=shown+" hero";
 }
 
@@ -2686,15 +2747,15 @@ async function exportAll(){
 }
 
 function buildBGrid(){
-  const g=$("bGrid"); g.textContent="";
-  heroes.forEach(h=>{
+  const g=$("bGrid");
+  emitGallery(g,h=>{
     const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
     b.appendChild(portrait(h));
     const mk=document.createElement("span"); mk.className="marks";
     if(h.prio){ const s=document.createElement("span"); s.className="mk p"; s.textContent="★"; mk.appendChild(s); }
     b.appendChild(mk);
     const n=document.createElement("span"); n.className="cn"; n.textContent=h.name; b.appendChild(n);
-    g.appendChild(b);
+    return b;
   });
   const e=document.createElement("p"); e.className="gridempty"; e.id="bEmpty"; e.hidden=true;
   e.textContent="Nggak ada hero yang cocok."; g.appendChild(e);
@@ -2703,7 +2764,7 @@ function buildBGrid(){
 function renderBGrid(){
   if(!bGridBuilt) buildBGrid();
   const q=norm(bQuery); let shown=0;
-  [...$("bGrid").children].forEach(b=>{
+  [...$("bGrid").querySelectorAll(".hc")].forEach(b=>{
     if(!b.dataset.id) return;
     const h=byId.get(b.dataset.id); if(!h){ b.hidden=true; return; }
     const passF = bFilter==="all" ? true : bFilter==="prio" ? !!h.prio : h.lanes.includes(bFilter);
@@ -2716,6 +2777,7 @@ function renderBGrid(){
     b.querySelector(".cn").textContent=h.name;
   });
   $("bEmpty").hidden=shown>0;
+  syncHeads($("bGrid"),LANES.includes(bFilter));
 }
 
 /* ---- teams ---- */
@@ -3352,15 +3414,15 @@ function setArmNoteOnly(){
       : "Klik hero yang COMBO sama "+tn(relSubject)+". Klik lagi buat batal.";
 }
 function buildRelGrid(){
-  const g=$("relGrid"); g.textContent="";
-  heroes.forEach(h=>{
+  const g=$("relGrid");
+  emitGallery(g,h=>{
     const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
     b.appendChild(portrait(h));
     const mk=document.createElement("span"); mk.className="marks";
     if(h.prio){ const s=document.createElement("span"); s.className="mk p"; s.textContent="★"; mk.appendChild(s); }
     b.appendChild(mk);
     const n=document.createElement("span"); n.className="cn"; n.textContent=h.name; b.appendChild(n);
-    g.appendChild(b);
+    return b;
   });
   const e=document.createElement("p"); e.className="gridempty"; e.id="relEmpty"; e.hidden=true;
   e.textContent="Nggak ada hero yang cocok."; g.appendChild(e);
@@ -3371,7 +3433,7 @@ function renderRelGrid(){
   const q=norm(relQuery); let shown=0;
   const subj=relSubject?byId.get(relSubject):null;
   const armed=subj&&relArm!=="subject"?(subj[relArm]||[]):[];
-  [...$("relGrid").children].forEach(b=>{
+  [...$("relGrid").querySelectorAll(".hc")].forEach(b=>{
     if(!b.dataset.id) return;
     const h=byId.get(b.dataset.id); if(!h){ b.hidden=true; return; }
     const passF = relFilter==="all" ? true : relFilter==="prio" ? !!h.prio : h.lanes.includes(relFilter);
@@ -3390,6 +3452,7 @@ function renderRelGrid(){
     b.querySelector(".cn").textContent=h.name;
   });
   $("relEmpty").hidden=shown>0;
+  syncHeads($("relGrid"),LANES.includes(relFilter));
   $("relCount").textContent=shown+" hero";
 }
 function relClick(id){
@@ -3993,13 +4056,13 @@ function simGlow(){
 }
 
 function simBuildGrid(){
-  const g=$("simGrid"); g.textContent="";
-  heroes.slice().sort(heroOrder).forEach(h=>{
+  const g=$("simGrid");
+  emitGallery(g,h=>{
     const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
     b.appendChild(portrait(h));
     const mk=document.createElement("span"); mk.className="marks"; b.appendChild(mk);
     const n=document.createElement("span"); n.className="cn"; n.textContent=h.name; b.appendChild(n);
-    g.appendChild(b);
+    return b;
   });
   const e=document.createElement("p"); e.className="gridempty"; e.id="simEmpty"; e.hidden=true;
   e.textContent="Nggak ada hero yang cocok.";
@@ -4010,7 +4073,7 @@ function simRenderGrid(){
   if(!simGridBuilt) simBuildGrid();
   const q=norm(simQuery), G=simGlow();
   let shown=0;
-  [...$("simGrid").children].forEach(el=>{
+  [...$("simGrid").querySelectorAll(".hc")].forEach(el=>{
     if(!el.dataset||!el.dataset.id) return;
     const h=byId.get(el.dataset.id); if(!h){ el.hidden=true; return; }
     const passQ=!q||norm(h.name).includes(q);
@@ -4033,6 +4096,7 @@ function simRenderGrid(){
       else if(h.prio){ const s=document.createElement("i"); s.className="mk p"; s.textContent="★"; mk.appendChild(s); } }
   });
   $("simEmpty").hidden=shown>0;
+  syncHeads($("simGrid"),LANES.includes(simFilter));
   $("simCount").textContent=shown+" hero";
 }
 
