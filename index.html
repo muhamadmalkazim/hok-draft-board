@@ -414,6 +414,13 @@ html,body{height:100%}
   line-height:1;box-shadow:none}
 .legend i.c::before{content:"C";background:var(--ctr)}
 .legend i.k::before{content:"K";background:var(--cmb)}
+/* Lane yang udah keisi: diredupin, cincin sama bintangnya dimatiin, tapi tetep
+   bisa diklik — kadang ada alesan buat ban hero flex di lane yang udah keisi.
+   Kehover balik terang lagi biar nggak nebak-nebak itu hero apa. */
+.hc.lanedone:not(.off):not(.locked){opacity:.4}
+.hc.lanedone:not(.off):not(.locked):hover{opacity:1}
+.gsec.lanedone .ghead{opacity:.3}
+.ghead .gdone{font-weight:700;letter-spacing:.1em}
 .hc.off{opacity:.26;cursor:not-allowed}
 .hc.off .ph::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,transparent 45%,#fff 46%,#fff 54%,transparent 55%);opacity:.5}
 /* a ban the opponent is already locked out of: dimmed and labelled, still clickable */
@@ -1811,7 +1818,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="38d118f5";   /* diisi pas build */
+const APP_VER="582f23ad";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -2243,7 +2250,7 @@ function laneFree(id,open){
 
 function glowMaps(){
   const d=S.draft, counter={}, combo={};
-  if(archive()||!d.started||d.done||S.over) return {counter,combo,phase:null};
+  if(archive()||!d.started||d.done||S.over) return {counter,combo,phase:null,open:null};
   const st=SEQ[d.step], side=sideOf(st.s);
   const foeSide=side==="blue"?"red":"blue";
   const mine=slotsFor(side,"pick").map(i=>d.slots[i]).filter(Boolean);
@@ -2260,7 +2267,27 @@ function glowMaps(){
     arr(t.weak).forEach(c=>{ if(ok(c)) counter[c]=(counter[c]||0)+1; }); });
   withWho.forEach(p=>{ const h=byId.get(p); if(!h) return;
     (h.combo||[]).forEach(c=>{ if(ok(c)) combo[c]=(combo[c]||0)+1; }); });
-  return {counter,combo,phase:st.p};
+  return {counter,combo,phase:st.p,open};
+}
+
+/* Lane yang udah keisi nggak usah narik mata: heronya diredupin dan cincinnya
+   dimatiin. Pas ban, `open` itu lane LAWAN yang masih kosong — hero di lane
+   yang udah mereka isi percuma diban. Pas pick, itu lane kita sendiri.
+   Hero yang punya dua lane tetep terang selama salah satunya masih kosong. */
+function laneDead(id,open){ return !!open && !laneFree(id,open); }
+function markDeadLanes(g,open,phase){
+  const who=phase==="pick"?"tim lo":"lawan";
+  g.querySelectorAll(".gsec").forEach(sec=>{
+    const l=sec.dataset.lane;
+    const dead=!!open&&LANES.includes(l)&&!open.includes(l);
+    sec.classList.toggle("lanedone",dead);
+    const hd=sec.querySelector(".ghead"); if(!hd) return;
+    let tag=hd.querySelector(".gdone");
+    if(dead){
+      if(!tag){ tag=document.createElement("span"); tag.className="gdone"; hd.appendChild(tag); }
+      tag.textContent=" · udah keisi di "+who;
+    }else if(tag) tag.remove();
+  });
 }
 
 function renderGrid(){
@@ -2293,10 +2320,12 @@ function renderGrid(){
 
     const nc=G.counter[h.id]||0, nk=G.combo[h.id]||0, live=st==="free"||st==="wasteban";
     const sc=SC.strong[h.id], sw=SC.weak[h.id];
+    const dead=laneDead(h.id,G.open);
+    b.classList.toggle("lanedone",dead&&live);
     /* Cincin cuma buat dua hal yang nggak berubah tiap langkah: andalan lawan
        (ungu, menang) sama prioritas kita (kuning). Counter/combo berubah terus
        tiap ada yang kepick, jadi dia cukup badge C/K di pojok. */
-    const ring = (live&&sc) ? "gl-str" : h.prio ? "gl-prio" : null;
+    const ring = dead ? null : (live&&sc) ? "gl-str" : h.prio ? "gl-prio" : null;
     b.classList.toggle("glow",!!ring);
     ["gl-prio","gl-str"].forEach(c=>b.classList.toggle(c,c===ring));
 
@@ -2304,11 +2333,12 @@ function renderGrid(){
     const addMark=(cls,txt)=>{ const s=document.createElement("span"); s.className="mk "+cls; s.textContent=txt; marks.appendChild(s); };
     if(live&&sc) addMark("s",sc.w+"\u2013"+(sc.p-sc.w));
     else if(live&&sw) addMark("wk",sw.w+"\u2013"+(sw.p-sw.w));
-    if(h.prio) addMark("p","★");
+    if(h.prio&&!dead) addMark("p","★");
     if(live&&nc) addMark("c",nc>1?"C"+nc:"C");
     if(live&&nk) addMark("k",nk>1?"K"+nk:"K");
 
     const rel=[];
+    if(dead&&live) rel.push(G.phase==="pick"?"lane ini udah keisi di tim lo":"lane ini udah keisi di tim lawan — percuma diban");
     if(live&&sc) rel.push("andalan "+(scoutCache?scoutCache.team.name:"lawan")+": "+sc.p+" game, "+sc.w+"\u2013"+(sc.p-sc.w)+" ("+sc.wr+"%)");
     if(live&&sw) rel.push("lemah di "+(scoutCache?scoutCache.team.name:"lawan")+": "+sw.p+" game, "+sw.w+"\u2013"+(sw.p-sw.w)+" ("+sw.wr+"%)");
     if(live&&nc) rel.push(G.phase==="pick"?"counter "+nc+" pick musuh":"counter "+nc+" pick lo");
@@ -2325,6 +2355,7 @@ function renderGrid(){
   });
   $("gridEmpty").hidden=shown>0;
   syncHeads($("grid"),LANES.includes(filter));
+  markDeadLanes($("grid"),G.open,G.phase);
   $("galCount").textContent=shown+" hero";
 }
 
@@ -4055,7 +4086,7 @@ function simResetSeries(){
 function simGlow(){
   const counter={},combo={};
   const i=simCursor();
-  if(i<0) return {counter,combo,phase:null};
+  if(i<0) return {counter,combo,phase:null,open:null};
   const st=SEQ[i], side=sideOf(st.s), foe=side==="blue"?"red":"blue";
   const mine=simPicksOf(side), theirs=simPicksOf(foe);
   const beats = st.p==="pick" ? theirs : mine;
@@ -4069,7 +4100,7 @@ function simGlow(){
     arr(t.weak).forEach(c=>{ if(ok(c)) counter[c]=(counter[c]||0)+1; }); });
   withWho.forEach(p=>{ const h=byId.get(p); if(!h) return;
     arr(h.combo).forEach(c=>{ if(ok(c)) combo[c]=(combo[c]||0)+1; }); });
-  return {counter,combo,phase:st.p};
+  return {counter,combo,phase:st.p,open};
 }
 
 function simBuildGrid(){
@@ -4104,7 +4135,10 @@ function simRenderGrid(){
     el.classList.toggle("waste",st==="wasteban");
     /* dulu kelas cincinnya dipasang tanpa .glow, jadi di Simulasi nggak pernah
        kelihatan sama sekali — sekarang disamain sama tab Scrim */
-    const nc=G.counter[h.id]||0, nk=G.combo[h.id]||0, lit=!!h.prio&&!dead;
+    const nc=G.counter[h.id]||0, nk=G.combo[h.id]||0;
+    const dim=laneDead(h.id,G.open);
+    el.classList.toggle("lanedone",dim&&!dead);
+    const lit=!!h.prio&&!dead&&!dim;
     el.classList.toggle("glow",lit);
     el.classList.toggle("gl-prio",lit);
     el.title = st==="locked" ? h.name+" \u2014 udah dipake tim ini, nggak bisa dipick lagi"
@@ -4114,12 +4148,13 @@ function simRenderGrid(){
     const mk=el.querySelector(".marks"); if(mk){ mk.textContent="";
       const add=(cls,txt)=>{ const s=document.createElement("i"); s.className="mk "+cls; s.textContent=txt; mk.appendChild(s); };
       if(st==="locked") add("l","GBP");
-      else { if(h.prio) add("p","★");
+      else { if(h.prio&&!dim) add("p","★");
              if(!dead&&nc) add("c",nc>1?"C"+nc:"C");
              if(!dead&&nk) add("k",nk>1?"K"+nk:"K"); } }
   });
   $("simEmpty").hidden=shown>0;
   syncHeads($("simGrid"),LANES.includes(simFilter));
+  markDeadLanes($("simGrid"),G.open,G.phase);
   $("simCount").textContent=shown+" hero";
 }
 
@@ -4631,7 +4666,7 @@ function scoutData(){
      nggak perlu diban. Makin jauh draft jalan, makin pendek daftarnya —
      justru pas ban phase kedua, waktu daftarnya paling perlu pendek. */
   const theirPicks=slotsFor(sideOfTeam(key),"pick").map(i=>S.draft.slots[i]).filter(Boolean);
-  const open=openLanes(theirPicks);
+  const open=archive()?LANES.slice():openLanes(theirPicks);
   if(!G) return {team:t,games:0,strong:[],weak:[],comfort:[],open};
 
   const used=usedSet();
