@@ -432,6 +432,8 @@ html,body{height:100%}
 .hlist{display:flex;flex-direction:column;gap:8px;max-height:62vh;overflow-y:auto;padding:3px 3px 10px}
 .hstar{border-radius:50%;width:34px;height:34px;display:grid;place-items:center;font-size:15px;line-height:1;
   color:var(--ink-dim);background:var(--panel);transition:background .14s,color .14s,box-shadow .14s}
+.hmeta{border-radius:50%;width:34px;height:34px;display:grid;place-items:center;font-size:15px;line-height:1;
+  color:var(--ink-dim);background:var(--panel);transition:background .14s,color .14s,box-shadow .14s}
 .hstar:hover{color:var(--prio)}
 .hstar[aria-pressed="true"]{background:var(--prio);color:#2a1f05;box-shadow:0 0 12px var(--prio-glow)}
 .hrow{display:grid;grid-template-columns:56px minmax(140px,1.4fr) auto 134px 34px 40px;gap:12px;align-items:center;
@@ -915,6 +917,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .sugp.flat:hover{transform:none}
 .sugp .n.wl2{min-width:0;padding:0 5px;font-size:8.5px;background:var(--ink);color:var(--panel);
   font-variant-numeric:tabular-nums;top:-5px;right:-5px}
+
+/* gameta: ditandai biar turun ke belakang, bukan dihapus */
+.hmeta{font-size:15px;line-height:1}
+.hmeta[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
 
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(26px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:13px 26px;border-radius:999px;font-size:14px;font-weight:600;z-index:60;box-shadow:var(--lift-lg);animation:rise .22s ease-out;max-width:86vw;text-align:center}
 @keyframes rise{from{transform:translateX(-50%) translateY(10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
@@ -1785,9 +1791,9 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="cc823d2d";   /* diisi pas build */
+const APP_VER="1a6b5304";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
-function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
+function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
 function overridesOut(){ const o={}; heroes.forEach(h=>{ if(h.custom||h.edited) o[h.id]=heroDoc(h); }); return o; }
 function lsSave(){ try{ localStorage.setItem(LS,JSON.stringify({S,ov:overridesOut(),boards,teams})); }catch(e){} }
@@ -1809,7 +1815,7 @@ function saveHero(h){ dirty=true; lsSave();
   store.doc("heroes/"+h.id).set(heroDoc(h)).then(()=>markSaved(true)).catch(()=>markSaved(false)); }
 
 function buildRoster(ov){
-  heroes=ROSTER.map(([name,lanes,dmg])=>({id:slug(name),name,lanes:lanes.slice(),dmg,img:null,prio:false,weak:[],combo:[]}));
+  heroes=ROSTER.map(([name,lanes,dmg])=>({id:slug(name),name,lanes:lanes.slice(),dmg,img:null,prio:false,offmeta:false,weak:[],combo:[]}));
   const seen=new Set(heroes.map(h=>h.id));
   Object.entries(ov||{}).forEach(([id,o])=>{
     if(!o||typeof o!=="object") return;
@@ -1822,8 +1828,8 @@ function buildRoster(ov){
     if(seen.has(id)){ const h=heroes.find(x=>x.id===id);
       Object.assign(h,{name:str(o.name,h.name),lanes:lanes.length?lanes:arr(h.lanes).slice(),
         dmg:o.dmg===undefined?h.dmg:dmg,
-        img,prio:!!o.prio,weak:cs,combo:cb,edited:true});
-    }else{ heroes.push({id,name:str(o.name,id),lanes,dmg,img,prio:!!o.prio,
+        img,prio:!!o.prio,offmeta:!!o.offmeta,weak:cs,combo:cb,edited:true});
+    }else{ heroes.push({id,name:str(o.name,id),lanes,dmg,img,prio:!!o.prio,offmeta:!!o.offmeta,
         weak:cs,combo:cb,custom:true}); seen.add(id); }
   });
   heroes.sort((a,b)=>a.name.localeCompare(b.name));
@@ -2120,11 +2126,15 @@ function renderGames(){
 }
 
 /* ---- draft gallery ---- */
+const heroOrder=(a,b)=>(a.offmeta?1:0)-(b.offmeta?1:0)
+  ||(b.prio?1:0)-(a.prio?1:0)
+  ||a.name.localeCompare(b.name);
 function buildGrid(){
   const g=$("grid"); g.textContent="";
   /* priority heroes lead the gallery so they are the first thing seen in a ban phase */
-  const ordered=heroes.slice().sort((a,b)=>
-    (b.prio?1:0)-(a.prio?1:0) || a.name.localeCompare(b.name));
+  /* prioritas di depan, gameta ditendang ke belakang — biar pas ngeliat
+     seluruh hero, yang jarang kepick nggak nyampur sama yang umum */
+  const ordered=heroes.slice().sort(heroOrder);
   ordered.forEach(h=>{
     const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
     b.appendChild(portrait(h));
@@ -2139,6 +2149,33 @@ function buildGrid(){
 /* which heroes are counter- or combo-relevant at THIS step.
    Picking: red = beats what they picked, blue = combos with what I picked.
    Banning: red = beats what I picked (threat), blue = combos with what they picked (enabler). */
+/* ──────────────────────────────────────────────────────────────
+   Lane yang masih kosong buat satu tim.
+
+   Tanpa ini, saran kombo bisa nawarin roam kedua gara-gara dia cocok
+   sama farm yang udah kepick — padahal slot roam-nya udah keisi. Hero
+   multi-lane diproses duluan yang paling sedikit pilihannya, biar yang
+   fleksibel nggak nyerobot lane yang cuma bisa diisi satu hero.
+
+   Hero yang lane-nya belum diisi di tab Hero nggak pernah disaring:
+   mendingan kelebihan saran daripada nyembunyiin sesuatu berdasarkan
+   data yang emang belum ada.
+   ────────────────────────────────────────────────────────────── */
+function lanesOf(h){ return h?arr(h.lanes).filter(l=>LANES.includes(l)):[]; }
+function openLanes(picks){
+  const taken=new Set();
+  arr(picks).map(id=>byId.get(id)).filter(Boolean)
+    .map(lanesOf).filter(ls=>ls.length)
+    .sort((a,b)=>a.length-b.length)
+    .forEach(ls=>{ const f=ls.find(l=>!taken.has(l)); if(f) taken.add(f); });
+  return LANES.filter(l=>!taken.has(l));
+}
+function laneFree(id,open){
+  const ls=lanesOf(byId.get(id));
+  if(!ls.length) return true;
+  return ls.some(l=>open.includes(l));
+}
+
 function glowMaps(){
   const d=S.draft, counter={}, combo={};
   if(archive()||!d.started||d.done||S.over) return {counter,combo,phase:null};
@@ -2148,12 +2185,16 @@ function glowMaps(){
   const theirs=slotsFor(foeSide,"pick").map(i=>d.slots[i]).filter(Boolean);
   const beats = st.p==="pick" ? theirs : mine;
   const withWho = st.p==="pick" ? mine : theirs;
+  /* pas pick, yang relevan lane kita; pas ban, lane merekalah yang nentuin
+     masih bisa diambil apa nggak */
+  const open=openLanes(st.p==="pick"?mine:theirs);
+  const ok=id=>laneFree(id,open);
   /* Arahnya kebalik dari sebelumnya: sekarang yang dicatat itu "hero ini
      lemah lawan siapa", jadi lawan dari hero X ya isi daftar X.weak. */
   beats.forEach(id=>{ const t=byId.get(id); if(!t) return;
-    arr(t.weak).forEach(c=>{ counter[c]=(counter[c]||0)+1; }); });
+    arr(t.weak).forEach(c=>{ if(ok(c)) counter[c]=(counter[c]||0)+1; }); });
   withWho.forEach(p=>{ const h=byId.get(p); if(!h) return;
-    (h.combo||[]).forEach(c=>{ combo[c]=(combo[c]||0)+1; }); });
+    (h.combo||[]).forEach(c=>{ if(ok(c)) combo[c]=(combo[c]||0)+1; }); });
   return {counter,combo,phase:st.p};
 }
 
@@ -2260,6 +2301,21 @@ function heroRow(h){
     dmg.classList.toggle("unset",!h.dmg); renderMeters(); renderBoard(); };
   row.appendChild(dmg);
 
+  const meta=document.createElement("button"); meta.type="button"; meta.className="hmeta";
+  meta.textContent="\u2193"; meta.setAttribute("aria-pressed",String(!!h.offmeta));
+  const metaTip=()=>h.offmeta?h.name+" ditandai gameta \u2014 ditaro paling belakang"
+    :"Tandai "+h.name+" gameta, biar turun ke paling belakang";
+  meta.title=metaTip();
+  meta.onclick=()=>{
+    h.offmeta=!h.offmeta; h.edited=true; saveHero(h);
+    meta.setAttribute("aria-pressed",String(!!h.offmeta));
+    meta.title=metaTip();
+    gridBuilt=false; relGridBuilt=false; bGridBuilt=false; simGridBuilt=false;
+    renderGrid(); renderMeters();
+    if(hFilter==="gameta") renderHeroList();
+  };
+  row.appendChild(meta);
+
   const star=document.createElement("button"); star.type="button"; star.className="hstar";
   star.textContent="★"; star.setAttribute("aria-pressed",String(!!h.prio));
   star.title=h.prio?h.name+" ditandai prioritas":"Tandai "+h.name+" sebagai prioritas";
@@ -2297,6 +2353,7 @@ function renderHeroList(){
     if(hFilter==="prio") return !!h.prio;
     if(hFilter==="noimg") return !h.img;
     if(hFilter==="nodmg") return !h.dmg;
+    if(hFilter==="gameta") return !!h.offmeta;
     if(hFilter!=="all") return h.lanes.includes(hFilter);
     return true;
   });
@@ -2589,7 +2646,7 @@ async function exportAll(){
   const want=new Map();                       /* assetId -> path inside the zip, minus extension */
   const heroesOut=heroes.map(h=>{
     const o={id:h.id,name:h.name,lanes:h.lanes||[],dmg:h.dmg||null,prio:!!h.prio,
-      weak:h.weak||[],combo:h.combo||[],custom:!!h.custom,img:null};
+      offmeta:!!h.offmeta,weak:h.weak||[],combo:h.combo||[],custom:!!h.custom,img:null};
     if(h.img){ o.img="images/heroes/"+h.id; want.set(h.img,"images/heroes/"+h.id); }
     return o;
   });
@@ -3369,18 +3426,23 @@ function suggest(){
 
   if(st.p==="pick"){
     const combo={},counter={};
+    const open=openLanes(mine);
+    const ok=c=>free(c)&&!S.gbp[me].includes(c)&&laneFree(c,open);
     mine.forEach(p=>{ const h=byId.get(p); if(!h) return;
-      (h.combo||[]).forEach(c=>{ if(free(c)&&!S.gbp[me].includes(c)) combo[c]=(combo[c]||0)+1; }); });
+      (h.combo||[]).forEach(c=>{ if(ok(c)) combo[c]=(combo[c]||0)+1; }); });
     theirs.forEach(id=>{ const t=byId.get(id); if(!t) return;
-      arr(t.weak).forEach(c=>{ if(free(c)&&!S.gbp[me].includes(c)) counter[c]=(counter[c]||0)+1; }); });
+      arr(t.weak).forEach(c=>{ if(ok(c)) counter[c]=(counter[c]||0)+1; }); });
     return {kind:"pick",rows:[
       ["Combo sama pick lo",topOf(combo,10)],
       ["Counter buat pick musuh",topOf(counter,10)]
     ]};
   }
   const threat={};
+  /* lane musuh yang masih kosong: ngeban hero buat slot yang udah keisi
+     itu ban kebuang */
+  const fopen=openLanes(theirs);
   mine.forEach(id=>{ const t=byId.get(id); if(!t) return;
-    arr(t.weak).forEach(c=>{ if(free(c)&&!S.gbp[foe].includes(c)) threat[c]=(threat[c]||0)+1; }); });
+    arr(t.weak).forEach(c=>{ if(free(c)&&!S.gbp[foe].includes(c)&&laneFree(c,fopen)) threat[c]=(threat[c]||0)+1; }); });
   return {kind:"ban",rows:[["Bahaya buat pick lo — kandidat ban",topOf(threat,10)]]};
 }
 function renderSuggest(){
@@ -3710,7 +3772,7 @@ function addHero(){
   let n=1, name="Hero baru";
   while(heroes.some(h=>h.name===name)){ n++; name="Hero baru "+n; }
   const id=slug(name)+"-"+Date.now().toString(36).slice(-4);
-  const h={id,name,lanes:[],dmg:null,img:null,prio:false,weak:[],combo:[],custom:true};
+  const h={id,name,lanes:[],dmg:null,img:null,prio:false,offmeta:false,weak:[],combo:[],custom:true};
   heroes.push(h); heroes.sort((a,b)=>a.name.localeCompare(b.name)); byId.set(id,h);
   saveHero(h); gridBuilt=false; hQuery=""; $("hq").value=""; hFilter="all";
   [...$("hFilters").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v==="all")));
@@ -3773,7 +3835,7 @@ async function importZip(file){
     for(const h of d.heroes){
       if(!h||!h.id) continue;
       ov[h.id]={name:h.name,lanes:h.lanes||[],dmg:h.dmg??null,img:fixImg(h.img)||null,
-        prio:!!h.prio,weak:h.weak||[],combo:h.combo||[],custom:!!h.custom};
+        prio:!!h.prio,offmeta:!!h.offmeta,weak:h.weak||[],combo:h.combo||[],custom:!!h.custom};
       await store.doc("heroes/"+h.id).set(ov[h.id]);
     }
     buildRoster(ov); gridBuilt=false; relGridBuilt=false; bGridBuilt=false;
@@ -3924,15 +3986,15 @@ function simGlow(){
   const beats = st.p==="pick" ? theirs : mine;
   const withWho = st.p==="pick" ? mine : theirs;
   beats.forEach(id=>{ const t=byId.get(id); if(!t) return;
-    arr(t.weak).forEach(c=>{ counter[c]=(counter[c]||0)+1; }); });
+    arr(t.weak).forEach(c=>{ if(ok(c)) counter[c]=(counter[c]||0)+1; }); });
   withWho.forEach(p=>{ const h=byId.get(p); if(!h) return;
-    arr(h.combo).forEach(c=>{ combo[c]=(combo[c]||0)+1; }); });
+    arr(h.combo).forEach(c=>{ if(ok(c)) combo[c]=(combo[c]||0)+1; }); });
   return {counter,combo,phase:st.p};
 }
 
 function simBuildGrid(){
   const g=$("simGrid"); g.textContent="";
-  heroes.slice().sort((a,b)=>(b.prio?1:0)-(a.prio?1:0)||a.name.localeCompare(b.name)).forEach(h=>{
+  heroes.slice().sort(heroOrder).forEach(h=>{
     const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
     b.appendChild(portrait(h));
     const mk=document.createElement("span"); mk.className="marks"; b.appendChild(mk);
@@ -4714,7 +4776,7 @@ $("grid").onclick=e=>{ const b=e.target.closest(".hc"); if(b) pickHero(b.dataset
   b.onclick=()=>{ filter=v; [...$("filters").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===v))); renderGrid(); };
   $("filters").appendChild(b);
 });
-[["all","Semua"],["prio","★ Prioritas"],["noimg","Belum ada gambar"],["nodmg","Belum ada damage"],...LANES.map(l=>[l,LN[l]])].forEach(([v,t])=>{
+[["all","Semua"],["prio","★ Prioritas"],["gameta","↓ Gameta"],["noimg","Belum ada gambar"],["nodmg","Belum ada damage"],...LANES.map(l=>[l,LN[l]])].forEach(([v,t])=>{
   const b=document.createElement("button"); b.dataset.v=v; b.textContent=t; b.setAttribute("aria-pressed",String(v==="all"));
   b.onclick=()=>{ hFilter=v; [...$("hFilters").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===v))); renderHeroList(); };
   $("hFilters").appendChild(b);
