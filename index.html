@@ -742,6 +742,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 /* ---- teams: bagian yang dipake dua lapis ---- */
 .plist{display:flex;flex-direction:column;gap:6px}
 .dsec .plist{max-width:560px}
+/* riwayat seri selebar kartu: 18 potret per game butuh ruang */
+.dsec.full .plist{max-width:none}
 .prow{display:grid;grid-template-columns:minmax(0,1fr) 100px 30px;gap:7px;align-items:center}
 .prow input,.prow select{background:var(--track);box-shadow:none;border-radius:10px;padding:7px 11px;font-size:12.5px}
 .prow select{appearance:none}
@@ -750,24 +752,37 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .px:hover{background:var(--red);color:#fff}
 .tfoot{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--sunk)}
 .tfoot .sp{flex:1 1 auto}
-.hitem{display:flex;flex-direction:column;gap:7px}
-.srow{display:flex;align-items:center;gap:9px;background:var(--track);border-radius:12px;padding:9px 13px;
-  font-size:12.5px;width:100%;text-align:left;transition:background .14s}
+.hitem{display:flex;flex-direction:column;gap:5px}
+/* Baris ringkas: kolomnya dipatok, jadi teksnya nggak pernah turun baris
+   walau ada tombol hapus di sebelahnya. */
+.hrow{display:flex;align-items:center;gap:6px}
+.srow{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:58px minmax(0,1fr) auto 14px;
+  gap:9px;align-items:center;background:var(--track);border-radius:11px;padding:7px 12px;
+  font-size:12.5px;text-align:left;transition:background .14s}
 .srow:hover{background:var(--sunk)}
+.srow b{font-size:11.5px}
 .srow b.wn{color:var(--ok)} .srow b.ls{color:var(--red)}
-.srow .d{color:var(--ink-dim);font-size:11.5px;margin-left:auto;white-space:nowrap}
-.srow .chev{color:var(--ink-dim);font-size:16px;line-height:1;transition:transform .16s;flex:0 0 auto}
+.srow .st{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow .d{color:var(--ink-dim);font-size:11.5px;white-space:nowrap}
+.srow .chev{color:var(--ink-dim);font-size:15px;line-height:1;transition:transform .16s}
 .srow.open .chev{transform:rotate(90deg)}
-.hbody{display:flex;flex-direction:column;gap:9px;padding:4px 2px 8px}
-.hg{background:var(--track);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
-.hgh{display:flex;align-items:center;gap:8px}
-.hgh b{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:var(--ink-dim)}
-.hgh .wl{font-size:11.5px;font-weight:700;margin-left:auto}
-.hgh .wl.wn{color:var(--ok)} .hgh .wl.ls{color:var(--red)}
-.hgr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.hgr .k2{font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:var(--ink-dim);
-  flex:0 0 62px}
-.hgr .gth{width:28px;height:28px;border-radius:9px}
+.hdel{flex:0 0 auto;width:26px;height:26px;font-size:14px}
+.hdel.armed{background:var(--red);color:#fff}
+
+/* Isi seri: satu game satu baris — label, lalu kita, lalu lawan. */
+.hbody{display:flex;flex-direction:column;gap:4px;padding:3px 0 8px}
+.hgh2,.hg{display:grid;grid-template-columns:118px minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:center}
+.hgh2{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;
+  color:var(--ink-dim);padding:0 2px 2px}
+.hg{background:var(--track);border-radius:10px;padding:5px 8px}
+.hgl{display:flex;align-items:center;gap:6px;min-width:0}
+.hgl b{font-size:10.5px;font-weight:800;color:var(--ink-dim)}
+.hgl .wl{font-size:10px;font-weight:700}
+.hgl .wl.wn{color:var(--ok)} .hgl .wl.ls{color:var(--red)}
+.hgs{display:flex;align-items:center;gap:3px;flex-wrap:wrap;min-width:0}
+.hgs .gth{width:26px;height:26px;border-radius:8px}
+.hgsep{width:1px;height:18px;background:var(--sunk);margin:0 5px;flex:0 0 auto}
+.hgs .gnone{padding:0}
 
 @media (max-width:980px){
   .dtop{grid-template-columns:minmax(0,1fr)}
@@ -1735,7 +1750,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="ce4d4fcb";   /* diisi pas build */
+const APP_VER="8f046eaf";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -2972,46 +2987,64 @@ function renderTeamDetail(t){
     const shx=dsec("Riwayat seri","Klik satu seri buat liat draft tiap game dari sudut pandang tim ini.");
     shx.classList.add("full");
     const hist=document.createElement("div"); hist.className="plist";
+    /* Satu game = satu baris: kita di kiri, lawan di kanan, pick nempel
+       sama ban-nya. Dulu tiap kelompok turun baris sendiri — enam baris
+       buat satu game, dan buat liat dua game harus gulir. */
+    const mkHead=()=>{
+      const d2=document.createElement("div"); d2.className="hgh2";
+      const a1=document.createElement("span"); a1.textContent="";
+      const a2=document.createElement("span"); a2.textContent="Kita";
+      const a3=document.createElement("span"); a3.textContent="Lawan";
+      d2.append(a1,a2,a3); return d2;
+    };
+
     arr(t.history).slice().reverse().forEach(h=>{
       const wrap=document.createElement("div"); wrap.className="hitem";
       const line=document.createElement("div"); line.className="hrow";
       const r=document.createElement("button"); r.type="button"; r.className="srow";
       const res=document.createElement("b"); res.className=h.win?"wn":"ls";
       res.textContent=h.win?"Menang":"Kalah";
-      const sp2=document.createElement("span"); sp2.textContent=h.score+" vs "+(h.vs||"—")
-        +(gcount(h)?" · "+gcount(h)+" game":"")+(h.mode==="arsip"?" · arsip":"");
+      const sp2=document.createElement("span"); sp2.className="st";
+      sp2.textContent=h.score+" vs "+(h.vs||"\u2014")
+        +(gcount(h)?" \u00b7 "+gcount(h)+" game":"")+(h.mode==="arsip"?" \u00b7 arsip":"");
       const dt=document.createElement("span"); dt.className="d";
       dt.textContent=new Date(h.at).toLocaleDateString("id-ID",{day:"2-digit",month:"short"});
-      const cv=document.createElement("span"); cv.className="chev"; cv.textContent="›";
+      const cv=document.createElement("span"); cv.className="chev"; cv.textContent="\u203a";
       r.append(res,sp2,dt,cv);
+
       const body=document.createElement("div"); body.className="hbody"; body.hidden=true;
       if(arr(h.games).length){
+        body.appendChild(mkHead());
         arr(h.games).forEach(g=>{
           const gr=document.createElement("div"); gr.className="hg";
-          const hd=document.createElement("div"); hd.className="hgh";
+          const lab=document.createElement("div"); lab.className="hgl";
           const gl=document.createElement("b"); gl.textContent="G"+g.g;
           const sc=document.createElement("span");
           sc.className="sidechip "+(g.side==="blue"?"b":"r"); sc.textContent=g.side==="blue"?"Biru":"Merah";
           const wl=document.createElement("span"); wl.className="wl "+(g.win?"wn":"ls");
           wl.textContent=g.win?"menang":"kalah";
-          hd.append(gl,sc,wl); gr.appendChild(hd);
-          const mk=(ids,label,ban)=>{
-            const rw=document.createElement("div"); rw.className="hgr";
-            const k=document.createElement("span"); k.className="k2"; k.textContent=label;
-            rw.appendChild(k);
-            const th=document.createElement("div"); th.className="gthumbs";
-            arr(ids).forEach(id=>{
+          lab.append(gl,sc,wl); gr.appendChild(lab);
+          const side=(picks,bans)=>{
+            const c=document.createElement("div"); c.className="hgs";
+            arr(picks).forEach(id=>{
               const hh=byId.get(id)||{name:id,img:null};
-              const b2=document.createElement("div"); b2.className="gth"+(ban?" ban":""); b2.title=hh.name;
-              b2.appendChild(portrait(hh)); th.appendChild(b2);
+              const th=document.createElement("div"); th.className="gth"; th.title=hh.name;
+              th.appendChild(portrait(hh)); c.appendChild(th);
             });
-            if(!arr(ids).length){ const e=document.createElement("span"); e.className="gnone"; e.textContent="—"; th.appendChild(e); }
-            rw.appendChild(th); return rw;
+            if(arr(bans).length){
+              const sep=document.createElement("span"); sep.className="hgsep"; c.appendChild(sep);
+              arr(bans).forEach(id=>{
+                const hh=byId.get(id)||{name:id,img:null};
+                const th=document.createElement("div"); th.className="gth ban"; th.title="Ban: "+hh.name;
+                th.appendChild(portrait(hh)); c.appendChild(th);
+              });
+            }
+            if(!arr(picks).length&&!arr(bans).length){
+              const e=document.createElement("span"); e.className="gnone"; e.textContent="\u2014"; c.appendChild(e); }
+            return c;
           };
-          gr.appendChild(mk(g.mine,"Pick kita"));
-          gr.appendChild(mk(g.theirs,"Pick lawan"));
-          if(arr(g.myBans).length) gr.appendChild(mk(g.myBans,"Ban kita",true));
-          if(arr(g.theirBans).length) gr.appendChild(mk(g.theirBans,"Ban lawan",true));
+          gr.appendChild(side(g.mine,g.myBans));
+          gr.appendChild(side(g.theirs,g.theirBans));
           body.appendChild(gr);
         });
       }else{
@@ -3024,7 +3057,7 @@ function renderTeamDetail(t){
       /* Seri salah catat itu kejadian biasa — tes, salah pencet, salah tim.
          Dua klik, dan kalau serinya punya sid dia dihapus dari semua tim
          yang nyimpen seri yang sama, bukan cuma dari tim yang lagi kebuka. */
-      const del=document.createElement("button"); del.type="button"; del.className="px";
+      const del=document.createElement("button"); del.type="button"; del.className="px hdel";
       del.textContent="\u00d7"; del.title="Hapus seri ini";
       let armed=null;
       del.onclick=()=>{
