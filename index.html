@@ -927,6 +927,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
   background:var(--track);color:var(--ink-mid);margin-right:5px;transition:background .14s,color .14s}
 .scoutpick[aria-pressed="true"]{background:var(--scout);color:#fff}
 .scoutg{font-size:11px;color:var(--ink-dim);margin-left:3px}
+.scoutg.lanesleft::before{content:"\00b7";margin-right:5px;opacity:.55}
 .scout .thr{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-dim);white-space:nowrap}
 .scout .thr input{width:44px;background:var(--track);box-shadow:none;border-radius:8px;
   padding:4px 7px;font-size:11.5px;font-weight:700;text-align:center;color:var(--ink)}
@@ -1810,7 +1811,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="e5d93c07";   /* diisi pas build */
+const APP_VER="38d118f5";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -4625,7 +4626,13 @@ function scoutData(){
   if(!t) return null;
   const st=teamStats(t);
   const G=st.games.w+st.games.l;
-  if(!G) return {team:t,games:0,strong:[],weak:[],comfort:[]};
+  /* Lane yang udah keisi sama pick MEREKA game ini dicoret: nggak ada tim yang
+     ambil mid kedua atau jungler kedua, jadi andalan mereka di lane itu udah
+     nggak perlu diban. Makin jauh draft jalan, makin pendek daftarnya —
+     justru pas ban phase kedua, waktu daftarnya paling perlu pendek. */
+  const theirPicks=slotsFor(sideOfTeam(key),"pick").map(i=>S.draft.slots[i]).filter(Boolean);
+  const open=openLanes(theirPicks);
+  if(!G) return {team:t,games:0,strong:[],weak:[],comfort:[],open};
 
   const used=usedSet();
   const theirGbp=new Set(arr(S.gbp&&S.gbp[key]));
@@ -4633,6 +4640,7 @@ function scoutData(){
   const strong=[], weak=[], comfort=[];
   st.mine.forEach((e,id2)=>{
     if(used.has(id2)||theirGbp.has(id2)) return;   /* percuma: udah kepake atau udah kekunci buat mereka */
+    if(!laneFree(id2,open)) return;                /* lane mereka di situ udah keisi */
     const wr=pct(e.w,e.p);
     if(e.p>=scoutMin&&wr>=scoutWr) strong.push([id2,e,wr]);
     else if(e.p>=scoutMin&&wr<=lo) weak.push([id2,e,wr]);
@@ -4643,7 +4651,7 @@ function scoutData(){
   const byLoss=(a,b)=>((b[1].p-b[1].w)-(a[1].p-a[1].w))||(b[1].p-a[1].p)||hName(a[0]).localeCompare(hName(b[0]));
   const byPicks=(a,b)=>(b[1].p-a[1].p)||byWins(a,b);
   strong.sort(byWins); weak.sort(byLoss); comfort.sort(byPicks);
-  return {team:t,games:G,strong,weak,comfort};
+  return {team:t,games:G,strong,weak,comfort,open};
 }
 
 function scoutMaps(){
@@ -4712,6 +4720,14 @@ function renderScout(){
     const g=document.createElement("span"); g.className="scoutg";
     g.textContent=s.games+" game kecatat"; who.appendChild(g);
   }
+  /* biar kelihatan kenapa daftarnya memendek sendiri tiap mereka pick */
+  const op=arr(s.open);
+  if(op.length&&op.length<LANES.length){
+    const o=document.createElement("span"); o.className="scoutg lanesleft";
+    o.textContent="sisa lane: "+op.map(l=>LN[l]).join(", ");
+    o.title="Lane mereka yang udah keisi dicoret dari daftar di bawah";
+    who.appendChild(o);
+  }
   const body=$("scoutBody"); body.textContent="";
   if(!s.games){
     const e=document.createElement("p"); e.className="sugempty";
@@ -4720,12 +4736,15 @@ function renderScout(){
   }
   const d=S.draft;
   const banning = d.started&&!d.done&&!S.over&&!archive()&&SEQ[d.step].p==="ban";
+  const full=!arr(s.open).length;
+  const tail=full?" Lima lane mereka udah keisi semua."
+       :(arr(s.open).length<LANES.length?" (lane mereka yang udah keisi nggak diitung)":"");
   body.appendChild(scoutRow("Andalan mereka — kandidat ban",s.strong,
-    "Belum ada hero yang lolos ambang "+scoutMin+" game / "+scoutWr+"%.",banning));
+    "Belum ada hero yang lolos ambang "+scoutMin+" game / "+scoutWr+"%."+tail,banning));
   body.appendChild(scoutRow("Sering dipake",s.comfort,
-    "Belum ada hero yang muncul di separo game mereka.",banning));
+    "Belum ada hero yang muncul di separo game mereka."+tail,banning));
   body.appendChild(scoutRow("Lemah — nggak usah diban",s.weak,
-    "Belum ada hero yang lolos ambang di sisi sebaliknya.",false));
+    "Belum ada hero yang lolos ambang di sisi sebaliknya."+tail,false));
 }
 
 $("scoutMin").onchange=()=>{
