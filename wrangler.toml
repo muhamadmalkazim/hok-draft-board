@@ -1,0 +1,10 @@
+# Cloudflare nge-deploy repo ini lewat `npx wrangler deploy`, dan wrangler
+# butuh tau apa yang mau disajikan. Situs ini isinya cuma file statis —
+# nggak ada kode yang jalan di server — jadi nggak ada `main`, cuma folder
+# aset. Nanti kalau butuh kode sisi server (misalnya nyimpen kunci rahasia),
+# tinggal tambahin `main` di sini tanpa pindah hosting.
+name = "hok-draft-board"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./"
