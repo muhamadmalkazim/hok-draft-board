@@ -1735,7 +1735,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="d7760163";   /* diisi pas build */
+const APP_VER="ce4d4fcb";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -2974,6 +2974,7 @@ function renderTeamDetail(t){
     const hist=document.createElement("div"); hist.className="plist";
     arr(t.history).slice().reverse().forEach(h=>{
       const wrap=document.createElement("div"); wrap.className="hitem";
+      const line=document.createElement("div"); line.className="hrow";
       const r=document.createElement("button"); r.type="button"; r.className="srow";
       const res=document.createElement("b"); res.className=h.win?"wn":"ls";
       res.textContent=h.win?"Menang":"Kalah";
@@ -3019,7 +3020,35 @@ function renderTeamDetail(t){
         body.appendChild(e);
       }
       r.onclick=()=>{ body.hidden=!body.hidden; r.classList.toggle("open",!body.hidden); };
-      wrap.append(r,body); hist.appendChild(wrap);
+
+      /* Seri salah catat itu kejadian biasa — tes, salah pencet, salah tim.
+         Dua klik, dan kalau serinya punya sid dia dihapus dari semua tim
+         yang nyimpen seri yang sama, bukan cuma dari tim yang lagi kebuka. */
+      const del=document.createElement("button"); del.type="button"; del.className="px";
+      del.textContent="\u00d7"; del.title="Hapus seri ini";
+      let armed=null;
+      del.onclick=()=>{
+        if(!armed){
+          del.textContent="?"; del.classList.add("armed");
+          armed=setTimeout(()=>{ armed=null; del.textContent="\u00d7"; del.classList.remove("armed"); },4000);
+          return;
+        }
+        clearTimeout(armed); armed=null;
+        let n=0;
+        if(h.sid){
+          teams.forEach(x=>{
+            const before=arr(x.history).length;
+            x.history=arr(x.history).filter(e=>e.sid!==h.sid);
+            if(x.history.length!==before){ saveTeam(x); n++; }
+          });
+        }else{
+          t.history=arr(t.history).filter(e=>e!==h); saveTeam(t); n=1;
+        }
+        renderTeams();
+        toast(n>1?"Seri dihapus dari "+n+" tim.":"Seri dihapus.");
+      };
+      line.append(r,del);
+      wrap.append(line,body); hist.appendChild(wrap);
     });
     shx.appendChild(hist);
     d.appendChild(shx);
