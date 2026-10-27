@@ -676,46 +676,53 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .tcname.big:hover,.tcname.big:focus{background:var(--track)}
 
 /* ---- teams: lapis 2 (rincian) ---- */
-.dhead{display:flex;flex-direction:column;gap:16px;margin-bottom:22px}
-.dhead>.pill{align-self:flex-start}
-.pill.ghost{background:transparent;box-shadow:none;color:var(--ink-mid)}
-.pill.ghost:hover{background:var(--track);box-shadow:none;transform:none;color:var(--ink)}
-.pill.danger{color:var(--red-deep);background:var(--red-tint);box-shadow:none}
-.pill.danger:hover{background:var(--red);color:#fff;box-shadow:var(--lift-sm)}
-.pill.danger.armed{background:var(--red);color:#fff;box-shadow:var(--lift-sm)}
-.dhrow{display:flex;align-items:center;gap:17px}
-.dhname{min-width:0;display:flex;flex-direction:column;gap:5px}
-.dhsub{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12px;color:var(--ink-mid);
+/* Melebar, bukan manjang: kotak angka nempel di sebelah kepala, sisanya
+   dua kolom. Tiap bagian yang berdiri sendiri-sendiri satu baris penuh
+   bikin halaman ini kebanyakan gulir buat isi yang sedikit. */
+.dback{margin-bottom:14px}
+.dtop{display:grid;grid-template-columns:minmax(240px,1fr) auto;gap:16px 22px;
+  align-items:center;margin-bottom:20px}
+.dhrow{display:flex;align-items:center;gap:14px;min-width:0}
+.dhname{min-width:0;display:flex;flex-direction:column;gap:3px}
+.dhsub{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--ink-mid);
   font-variant-numeric:tabular-nums;padding-left:6px}
-.dhsub .dhdot{color:var(--ink-dim)}
-.dhsub .dhf{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--ink-dim)}
+.dhsub .dim{color:var(--ink-dim)}
 
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin-bottom:26px}
-.tile{background:var(--track);border-radius:16px;padding:13px 15px 14px;display:flex;flex-direction:column;gap:2px;
-  border-left:3px solid transparent}
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.tile{background:var(--track);border-radius:14px;padding:10px 11px;display:flex;flex-direction:column;
+  justify-content:center;gap:1px;aspect-ratio:1/1;min-width:86px;border-left:3px solid transparent}
 .tile.blue{border-left-color:var(--blue)}
 .tile.red{border-left-color:var(--red)}
-.tile .tlk{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--ink-dim)}
-.tile .tnum{font-size:25px;font-weight:800;letter-spacing:-.03em;line-height:1.15;font-variant-numeric:tabular-nums}
-.tile .tsub{font-size:11px;color:var(--ink-mid);font-variant-numeric:tabular-nums}
+.tile .tlk{font-size:8.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:var(--ink-dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .tnum{font-size:23px;font-weight:800;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile .tsub{font-size:9.5px;line-height:1.35;color:var(--ink-mid);font-variant-numeric:tabular-nums}
 
-.dsec{padding-top:19px;margin-top:19px;border-top:1px solid var(--sunk)}
-.dsec:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.dcols{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px 26px;align-items:start}
+.dcol{min-width:0;display:flex;flex-direction:column}
+
+.dsec{padding-top:16px;margin-top:16px;border-top:1px solid var(--sunk)}
+.dcol>.dsec:first-child{border-top:0;padding-top:0;margin-top:0}
+.dsec.full{border-top:1px solid var(--sunk);margin-top:20px;padding-top:18px}
 .dsh{display:flex;align-items:baseline;gap:10px}
-.dsh b{font-size:14.5px;font-weight:800;letter-spacing:-.01em}
-.dsn{font-size:11.5px;color:var(--ink-dim);line-height:1.55;margin-top:5px;max-width:64ch}
-.dsa{margin-top:11px}
-.twocol{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:18px;margin-top:12px}
-.twocol .lbl{display:block;margin-bottom:8px}
-.twocol .hsl{max-width:none}
+.dsh b{font-size:13.5px;font-weight:800;letter-spacing:-.01em}
+.dsn{font-size:11px;color:var(--ink-dim);line-height:1.5;margin-top:4px;max-width:60ch}
+.dsa{margin-top:9px}
+
+.lanechips{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+.lanechips .pill{display:flex;align-items:baseline;gap:6px}
+.lanechips .pill em{font-style:normal;font-size:10.5px;color:var(--ink-dim);font-weight:600}
+.lanechips .pill[aria-pressed="true"]{background:var(--ink);color:var(--panel);box-shadow:var(--lift-sm)}
+.lanechips .pill[aria-pressed="true"] em{color:var(--panel);opacity:.65}
 
 /* satu baris statistik hero: thumb · nama · jumlah · W–L · bar */
-.hsl{display:flex;flex-direction:column;gap:3px;margin-top:12px;max-width:560px}
-.hsr{display:grid;grid-template-columns:30px minmax(110px,196px) 42px 48px 116px;gap:12px;align-items:center;
-  padding:4px 7px;border-radius:10px;transition:background .13s}
+/* kolom kanan lebar; tanpa batas ini angkanya kelempar jauh dari namanya */
+.hsl{display:flex;flex-direction:column;gap:2px;margin-top:10px;max-width:520px}
+.hsr{display:grid;grid-template-columns:28px minmax(0,1fr) 38px 44px 104px;gap:10px;align-items:center;
+  padding:3px 7px;border-radius:9px;transition:background .13s}
 .hsr:hover{background:var(--track)}
-.hsr.foe{grid-template-columns:minmax(110px,196px) 62px 48px 116px}
-.hsr .gth{width:30px;height:30px;border-radius:10px}
+.hsr.foe{grid-template-columns:minmax(0,1fr) 58px 44px 104px}
+.hsr .gth{width:28px;height:28px;border-radius:9px}
 .hsn{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hsc{font-size:11.5px;color:var(--ink-mid);font-variant-numeric:tabular-nums;text-align:right}
 .hswl{font-size:11.5px;color:var(--ink-dim);font-variant-numeric:tabular-nums;text-align:right}
@@ -727,22 +734,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .wrn{font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
 .wrn.thin{font-weight:500;color:var(--ink-dim)}
 
-.lanegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(296px,1fr));gap:16px 24px;margin-top:12px}
-.lanecol{display:flex;flex-direction:column}
-.laneh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.laneh b{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--ink-mid)}
-.lanewho{font-size:11.5px;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lanecol .hsl{margin-top:7px;max-width:none}
-.lanecol .hsr{grid-template-columns:28px minmax(70px,1fr) 34px 96px;gap:9px}
-.lanecol .hsr .gth{width:28px;height:28px;border-radius:9px}
 
-.notes{display:flex;flex-direction:column;gap:7px;margin-top:12px;max-width:680px}
-.note2{font-size:12.5px;line-height:1.55;color:var(--ink-mid);background:var(--track);border-radius:12px;
-  padding:9px 13px;border-left:3px solid var(--sunk)}
-.note2.good{border-left-color:var(--ok)}
-.note2.warn{border-left-color:var(--prio)}
-.note2.blue{border-left-color:var(--blue)}
-.note2.red{border-left-color:var(--red)}
 
 /* ---- teams: bagian yang dipake dua lapis ---- */
 .plist{display:flex;flex-direction:column;gap:6px}
@@ -753,7 +745,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .px{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;line-height:1;
   color:var(--ink-dim);background:var(--track);transition:background .14s,color .14s}
 .px:hover{background:var(--red);color:#fff}
-.tfoot{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:24px;padding-top:18px;border-top:1px solid var(--sunk)}
+.tfoot{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--sunk)}
 .tfoot .sp{flex:1 1 auto}
 .hitem{display:flex;flex-direction:column;gap:7px}
 .srow{display:flex;align-items:center;gap:9px;background:var(--track);border-radius:12px;padding:9px 13px;
@@ -774,6 +766,13 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
   flex:0 0 62px}
 .hgr .gth{width:28px;height:28px;border-radius:9px}
 
+@media (max-width:980px){
+  .dtop{grid-template-columns:minmax(0,1fr)}
+  .dcols{grid-template-columns:minmax(0,1fr)}
+  .dcol>.dsec:first-child{border-top:1px solid var(--sunk);padding-top:16px;margin-top:16px}
+  .dcols>.dcol:first-child>.dsec:first-child{border-top:0;padding-top:0;margin-top:0}
+  .tiles{grid-template-columns:repeat(auto-fit,minmax(92px,1fr))}
+}
 @media (max-width:620px){
   /* separator dots strand themselves at the end of a wrapped line */
   .dhsub .dhdot{display:none}
@@ -782,8 +781,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
   .hsr .wrb{grid-column:2 / -1;margin-top:-2px}
   .hsr.foe{grid-template-columns:minmax(0,1fr) 56px 44px}
   .hsr.foe .wrb{grid-column:1 / -1}
-  .lanecol .hsr{grid-template-columns:28px minmax(0,1fr) 36px 42px}
-  .tcname.big{font-size:19px}
+    .tcname.big{font-size:19px}
   .tlogo.lg{width:62px;height:62px}
 }
 
@@ -1731,7 +1729,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="9cfce347";   /* diisi pas build */
+const APP_VER="aac26ba2";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -2623,7 +2621,7 @@ function renderBGrid(){
 }
 
 /* ---- teams ---- */
-let teams=[], logoTarget=null, teamOpen=null;
+let teams=[], logoTarget=null, teamOpen=null, laneOpen=null;
 
 /* Everything here is counted from what was actually recorded in each series.
    Percentages always travel with their sample size — a 100% winrate on two
@@ -2646,17 +2644,12 @@ function teamStats(t){
   const S={
     series:{w:0,l:0}, games:{w:0,l:0},
     side:{blue:{g:0,w:0},red:{g:0,w:0}},
-    mine:new Map(),        /* hero kami: p = dipake, w = kami menang   */
-    theirs:new Map(),      /* hero lawan: p = lawan pake, w = kami menang */
-    myBans:new Map(),      /* yang kami ban */
-    theirBans:new Map(),   /* yang di-ban ke kami */
+    mine:new Map(),        /* hero kami: p = dipake, w = kami menang */
     foes:new Map(),        /* per lawan */
     roles:new Map(),       /* lane -> Map(heroId -> {p,w}) */
-    dmg:new Map(),         /* tipe damage pick kami */
     form:[],               /* urutan hasil game, paling lama dulu */
-    picks:0, hasBans:false, lastAt:0
+    picks:0, lastAt:0
   };
-  const bump=(m,id,win)=>{ if(!id) return; const e=m.get(id)||{p:0,w:0}; e.p++; if(win) e.w++; m.set(id,e); };
   hist.forEach(h=>{
     h.win?S.series.w++:S.series.l++;
     if(h.at>S.lastAt) S.lastAt=h.at;
@@ -2670,16 +2663,13 @@ function teamStats(t){
       S.form.push({win:!!g.win,vs:key,at:h.at,g:g.g});
       const sd=S.side[g.side]; if(sd){ sd.g++; if(g.win) sd.w++; }
       arr(g.mine).forEach(id=>{
-        bump(S.mine,id,g.win); S.picks++;
+        const e=S.mine.get(id)||{p:0,w:0}; e.p++; if(g.win) e.w++; S.mine.set(id,e);
+        S.picks++;
         const hh=byId.get(id); if(!hh) return;
-        const lane=(hh.lanes&&hh.lanes[0])||null;
-        if(lane){ const m=S.roles.get(lane)||new Map(); const e=m.get(id)||{p:0,w:0};
-                  e.p++; if(g.win) e.w++; m.set(id,e); S.roles.set(lane,m); }
-        if(hh.dmg){ const d=S.dmg.get(hh.dmg)||{p:0,w:0}; d.p++; if(g.win) d.w++; S.dmg.set(hh.dmg,d); }
+        const lane=arr(hh.lanes)[0]; if(!lane) return;
+        const m=S.roles.get(lane)||new Map(); const le=m.get(id)||{p:0,w:0};
+        le.p++; if(g.win) le.w++; m.set(id,le); S.roles.set(lane,m);
       });
-      arr(g.theirs).forEach(id=>bump(S.theirs,id,g.win));
-      if(arr(g.myBans).length){ S.hasBans=true; arr(g.myBans).forEach(id=>bump(S.myBans,id,g.win)); }
-      if(arr(g.theirBans).length){ S.hasBans=true; arr(g.theirBans).forEach(id=>bump(S.theirBans,id,g.win)); }
     });
   });
   return S;
@@ -2835,17 +2825,28 @@ function heroList(pairs,limit,opt){
 }
 
 /* ---------- lapis 2 ---------- */
+/* ──────────────────────────────────────────────────────────────
+   Halaman satu tim.
+
+   Tata letaknya sengaja melebar, bukan manjang ke bawah: kotak
+   angka nempel di sebelah kepala, sisanya dua kolom. Tiap bagian
+   yang nggak kepake buat ngambil keputusan udah dibuang — hero
+   lawan, ban, tipe damage, dan catatan otomatis — karena tiap
+   lawan beda pendekatan dan angkanya nggak kebawa ke mana-mana.
+   ────────────────────────────────────────────────────────────── */
 function renderTeamDetail(t){
   const d=$("teamDetail"); d.textContent="";
   const s=teamStats(t);
   const G=s.games.w+s.games.l, SR=s.series.w+s.series.l;
 
-  /* -- kepala -- */
-  const head=document.createElement("div"); head.className="dhead";
-  const back=document.createElement("button"); back.type="button"; back.className="pill sm ghost";
+  const back=document.createElement("button"); back.type="button"; back.className="pill sm ghost dback";
   back.textContent="‹ Semua tim";
   back.onclick=()=>{ teamOpen=null; renderTeams(); };
-  const row=document.createElement("div"); row.className="dhrow";
+  d.appendChild(back);
+
+  /* -- kepala + kotak angka, satu baris -- */
+  const top=document.createElement("div"); top.className="dtop";
+  const idb=document.createElement("div"); idb.className="dhrow";
   const lg=document.createElement("button"); lg.type="button"; lg.className="tlogo lg";
   lg.title="Upload logo "+t.name;
   lg.appendChild(portrait({name:t.name,img:t.logo}));
@@ -2867,46 +2868,44 @@ function renderTeamDetail(t){
     const r1=document.createElement("span");
     r1.textContent="Seri "+s.series.w+"–"+s.series.l+" · Game "+s.games.w+"–"+s.games.l;
     sub.appendChild(r1);
-    if(s.form.length){
-      const l=document.createElement("span"); l.className="dhdot"; l.textContent="·"; sub.appendChild(l);
-      const fl=document.createElement("span"); fl.className="dhf"; fl.textContent="Form";
-      sub.append(fl,formStrip(s.form,8));
-    }
+    if(s.form.length) sub.appendChild(formStrip(s.form,8));
     if(s.lastAt){
-      const l2=document.createElement("span"); l2.className="dhdot"; l2.textContent="·"; sub.appendChild(l2);
-      const dd=document.createElement("span");
-      dd.textContent="terakhir "+new Date(s.lastAt).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
+      const dd=document.createElement("span"); dd.className="dim";
+      dd.textContent=new Date(s.lastAt).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
       sub.appendChild(dd);
     }
   }else{
-    const r1=document.createElement("span"); r1.textContent="Belum ada seri yang kecatat buat tim ini.";
+    const r1=document.createElement("span"); r1.className="dim";
+    r1.textContent="Belum ada seri yang kecatat.";
     sub.appendChild(r1);
   }
   nmw.append(nm,sub);
-  row.append(lg,nmw);
-  head.append(back,row);
-  d.appendChild(head);
+  idb.append(lg,nmw);
 
-  /* -- kotak angka -- */
   const tiles=document.createElement("div"); tiles.className="tiles";
-  tiles.appendChild(statTile("Seri",SR?s.series.w+"–"+s.series.l:"—",SR?pct(s.series.w,SR)+"% dari "+SR+" seri":"belum ada"));
-  tiles.appendChild(statTile("Game",G?s.games.w+"–"+s.games.l:"—",G?pct(s.games.w,G)+"% dari "+G+" game":"belum ada"));
+  const thin=n=>n&&n<MIN_SAMPLE?" · tipis":"";
+  tiles.appendChild(statTile("Seri",SR?s.series.w+"–"+s.series.l:"—",SR?pct(s.series.w,SR)+"% · "+SR+" seri":"—"));
+  tiles.appendChild(statTile("Game",G?s.games.w+"–"+s.games.l:"—",G?pct(s.games.w,G)+"% · "+G+" game":"—"));
   const bs=s.side.blue, rs=s.side.red;
   tiles.appendChild(statTile("Blue side",bs.g?pct(bs.w,bs.g)+"%":"—",
-    bs.g?bs.w+"–"+(bs.g-bs.w)+" dari "+bs.g+" game"+(bs.g<MIN_SAMPLE?" (tipis)":""):"belum ada",
-    bs.g?"blue":""));
+    bs.g?bs.w+"–"+(bs.g-bs.w)+" · "+bs.g+"g"+thin(bs.g):"—","blue"));
   tiles.appendChild(statTile("Red side",rs.g?pct(rs.w,rs.g)+"%":"—",
-    rs.g?rs.w+"–"+(rs.g-rs.w)+" dari "+rs.g+" game"+(rs.g<MIN_SAMPLE?" (tipis)":""):"belum ada",
-    rs.g?"red":""));
-  tiles.appendChild(statTile("Pool hero",s.mine.size?String(s.mine.size):"—",
-    s.picks?s.picks+" pick kecatat":"belum ada"));
+    rs.g?rs.w+"–"+(rs.g-rs.w)+" · "+rs.g+"g"+thin(rs.g):"—","red"));
+  tiles.appendChild(statTile("Pool",s.mine.size?String(s.mine.size):"—",
+    s.picks?s.picks+" pick":"—"));
   const top5=rank(s.mine).slice(0,5).reduce((a,[,e])=>a+e.p,0);
-  tiles.appendChild(statTile("5 hero teratas",s.picks?pct(top5,s.picks)+"%":"—",
-    s.picks?"dari seluruh pick":"belum ada"));
-  d.appendChild(tiles);
+  tiles.appendChild(statTile("5 teratas",s.picks?pct(top5,s.picks)+"%":"—",
+    s.picks?"dari pick":"—"));
+  top.append(idb,tiles);
+  d.appendChild(top);
 
-  /* -- roster -- */
-  const rs2=dsec("Roster","Nama dan role yang kamu isi sendiri. Role dipake buat nyambungin pick per lane di bawah.");
+  /* -- dua kolom -- */
+  const cols=document.createElement("div"); cols.className="dcols";
+  const colA=document.createElement("div"); colA.className="dcol";
+  const colB=document.createElement("div"); colB.className="dcol";
+
+  /* roster */
+  const rs2=dsec("Roster","Role dipake buat nyambungin pick per lane.");
   const pl=document.createElement("div"); pl.className="plist";
   arr(t.players).forEach((p,i)=>{
     const r=document.createElement("div"); r.className="prow";
@@ -2934,64 +2933,11 @@ function renderTeamDetail(t){
     t.players.push({name:"",role:null}); saveTeam(t); renderTeams(); };
   const apw=document.createElement("div"); apw.className="dsa"; apw.appendChild(ap);
   rs2.appendChild(apw);
-  d.appendChild(rs2);
+  colA.appendChild(rs2);
 
-  /* -- hero kami -- */
-  const mine=rank(s.mine);
-  if(mine.length){
-    const sh=dsec("Hero kami","Diurut dari yang paling sering dipake. Angka menang–kalah ikut ditulis supaya persentase di bawah "+MIN_SAMPLE+" game nggak kebaca kayak fakta.");
-    sh.appendChild(heroList(mine,12));
-    d.appendChild(sh);
-  }
-
-  /* -- pick per lane -- */
-  if(s.roles.size){
-    const byRole=new Map();
-    arr(t.players).forEach(p=>{ if(p&&p.role&&p.name&&p.name.trim()){
-      byRole.set(p.role,(byRole.get(p.role)?byRole.get(p.role)+", ":"")+p.name.trim()); } });
-    const sr=dsec("Pick per lane",
-      "Turunan dari lane utama tiap hero, bukan catatan siapa yang megang. Nama pemain nempel dari role yang kamu isi di roster.");
-    const grid=document.createElement("div"); grid.className="lanegrid";
-    LANES.forEach(l=>{
-      const m=s.roles.get(l); if(!m||!m.size) return;
-      const col=document.createElement("div"); col.className="lanecol";
-      const h=document.createElement("div"); h.className="laneh";
-      const b=document.createElement("b"); b.textContent=LN[l];
-      h.appendChild(b);
-      if(byRole.get(l)){ const who=document.createElement("span"); who.className="lanewho"; who.textContent=byRole.get(l); h.appendChild(who); }
-      col.appendChild(h);
-      col.appendChild(heroList(rank(m),4,{noWL:true}));
-      grid.appendChild(col);
-    });
-    sr.appendChild(grid);
-    d.appendChild(sr);
-  }
-
-  /* -- hero lawan -- */
-  const theirs=rank(s.theirs);
-  if(theirs.length){
-    const sl=dsec("Hero lawan","Hero yang paling sering dipake lawan. Persentasenya winrate KAMI waktu hero itu ada di seberang — makin kecil makin ngeganggu.");
-    sl.appendChild(heroList(theirs,12));
-    d.appendChild(sl);
-  }
-
-  /* -- ban -- */
-  if(s.hasBans){
-    const sb=dsec("Ban","Cuma dari seri yang kecatat lengkap sama ban-nya. Mode arsip nggak nyimpen ban.");
-    const two=document.createElement("div"); two.className="twocol";
-    const a=document.createElement("div");
-    const al=document.createElement("span"); al.className="lbl"; al.textContent="Kami ban";
-    a.append(al,heroList(rank(s.myBans),8,{ban:true,countOnly:true}));
-    const b2=document.createElement("div");
-    const bl=document.createElement("span"); bl.className="lbl"; bl.textContent="Di-ban ke kami";
-    b2.append(bl,heroList(rank(s.theirBans),8,{ban:true,countOnly:true}));
-    two.append(a,b2); sb.appendChild(two);
-    d.appendChild(sb);
-  }
-
-  /* -- lawan -- */
+  /* lawan */
   if(s.foes.size){
-    const sf=dsec("Lawan","Rekap per tim lawan, diurut dari yang paling baru ketemu.");
+    const sf=dsec("Lawan","Diurut dari yang paling baru ketemu.");
     const box=document.createElement("div"); box.className="hsl";
     [...s.foes].sort((a,b)=>(b[1].lastAt-a[1].lastAt)).forEach(([name,f])=>{
       const r=document.createElement("div"); r.className="hsr foe";
@@ -3003,31 +2949,47 @@ function renderTeamDetail(t){
       box.appendChild(r);
     });
     sf.appendChild(box);
-    d.appendChild(sf);
+    colA.appendChild(sf);
   }
 
-  /* -- tipe damage -- */
-  if(s.dmg.size){
-    const sd=dsec("Tipe damage","Dihitung dari tipe damage tiap hero yang kamu isi di tab Hero. Komposisi yang nyandar ke satu tipe gampang dikunci satu item.");
-    const box=document.createElement("div"); box.className="hsl";
-    [...s.dmg].sort((a,b)=>b[1].p-a[1].p).forEach(([k,e])=>{
-      const r=document.createElement("div"); r.className="hsr foe";
-      const nm2=document.createElement("span"); nm2.className="hsn"; nm2.textContent=DMGN[k]||k;
-      const ct=document.createElement("span"); ct.className="hsc"; ct.textContent=pct(e.p,s.picks)+"%";
-      const wl=document.createElement("span"); wl.className="hswl"; wl.textContent=e.p+" pick";
-      r.append(nm2,ct,wl,wrBar(e.w,e.p));
-      box.appendChild(r);
+  /* hero kami */
+  const mine=rank(s.mine);
+  if(mine.length){
+    const sh=dsec("Hero kami","Angka menang–kalah ikut ditulis supaya persentase di bawah "+MIN_SAMPLE+" game nggak kebaca kayak fakta.");
+    sh.appendChild(heroList(mine,14));
+    colB.appendChild(sh);
+  }
+
+  /* pick per lane — satu daftar, lane-nya dipilih dari chip di atas */
+  if(s.roles.size){
+    const lanes=LANES.filter(l=>s.roles.get(l)&&s.roles.get(l).size);
+    if(!lanes.includes(laneOpen)) laneOpen=lanes[0];
+    const byRole=new Map();
+    arr(t.players).forEach(p=>{ if(p&&p.role&&p.name&&p.name.trim()){
+      byRole.set(p.role,(byRole.get(p.role)?byRole.get(p.role)+", ":"")+p.name.trim()); } });
+    const sr=dsec("Pick per lane","Turunan dari lane utama tiap hero, bukan catatan siapa yang megang.");
+    const chips=document.createElement("div"); chips.className="lanechips";
+    lanes.forEach(l=>{
+      const b=document.createElement("button"); b.type="button"; b.className="pill sm";
+      b.setAttribute("aria-pressed",String(l===laneOpen));
+      b.textContent=LN[l];
+      const who=byRole.get(l);
+      if(who){ const w=document.createElement("em"); w.textContent=who; b.appendChild(w); }
+      b.onclick=()=>{ laneOpen=l; renderTeams(); };
+      chips.appendChild(b);
     });
-    sd.appendChild(box);
-    d.appendChild(sd);
+    sr.appendChild(chips);
+    sr.appendChild(heroList(rank(s.roles.get(laneOpen)),8));
+    colB.appendChild(sr);
   }
 
-  /* -- catatan: cuma yang lolos ambang sampel -- */
-  d.appendChild(teamNotes(s));
+  cols.append(colA,colB);
+  d.appendChild(cols);
 
   /* -- riwayat seri -- */
   if(arr(t.history).length){
     const shx=dsec("Riwayat seri","Klik satu seri buat liat draft tiap game dari sudut pandang tim ini.");
+    shx.classList.add("full");
     const hist=document.createElement("div"); hist.className="plist";
     arr(t.history).slice().reverse().forEach(h=>{
       const wrap=document.createElement("div"); wrap.className="hitem";
@@ -3104,56 +3066,6 @@ function renderTeamDetail(t){
   f.append(sp,del); d.appendChild(f);
 }
 
-/* Cuma pola yang lolos ambang sampel yang muncul di sini. Kalau datanya
-   belum cukup, bagian ini bilang begitu — bukan ngarang temuan. */
-function teamNotes(s){
-  const sec=dsec("Catatan","Disimpulin otomatis dari angka di atas. Cuma pola dengan minimal "+MIN_SAMPLE+" game yang dihitung.");
-  const ul=document.createElement("div"); ul.className="notes";
-  const add=(txt,tone)=>{ const p=document.createElement("p"); p.className="note2"+(tone?" "+tone:"");
-    p.textContent=txt; ul.appendChild(p); };
-  const G=s.games.w+s.games.l;
-
-  const bs=s.side.blue, rs=s.side.red;
-  if(bs.g>=MIN_SAMPLE&&rs.g>=MIN_SAMPLE){
-    const gap=pct(bs.w,bs.g)-pct(rs.w,rs.g);
-    if(Math.abs(gap)>=20)
-      add((gap>0?"Jauh lebih kuat di blue side":"Jauh lebih kuat di red side")+": "
-        +pct(bs.w,bs.g)+"% ("+bs.g+" game) banding "+pct(rs.w,rs.g)+"% ("+rs.g+" game).",
-        gap>0?"blue":"red");
-  }
-  if(s.picks>=10){
-    const top5=rank(s.mine).slice(0,5).reduce((a,[,e])=>a+e.p,0);
-    const share=pct(top5,s.picks);
-    if(share>=60) add("Pool terpusat: 5 hero teratas "+share+"% dari "+s.picks+" pick. Empat ban yang tepat bisa ngambil separo rencananya.","warn");
-    else if(share<=35) add("Pool lebar: 5 hero teratas cuma "+share+"% dari "+s.picks+" pick. Susah dimatiin lewat ban.");
-  }
-  /* tiap kategori dibatesin 3 baris — kalau semuanya ditulis, catatan ini
-     berubah jadi daftar panjang dan nggak ada yang kebaca */
-  const CAP=3;
-  const take=(pairs,f)=>{ let n=0; for(const [id,e] of pairs){ if(n>=CAP) break; if(f(id,e)) n++; } };
-  take(rank(s.mine).filter(([,e])=>e.p>=MIN_SAMPLE&&pct(e.w,e.p)>=70),
-    (id,e)=>{ add("Andalan: "+hName(id)+" "+e.w+"–"+(e.p-e.w)+" ("+pct(e.w,e.p)+"% dari "+e.p+" game).","good"); return 1; });
-  take(rank(s.mine).filter(([,e])=>e.p>=MIN_SAMPLE&&pct(e.w,e.p)<=30),
-    (id,e)=>{ add("Sering dipake tapi jarang nyangkut: "+hName(id)+" "+e.w+"–"+(e.p-e.w)
-      +" ("+pct(e.w,e.p)+"% dari "+e.p+" game).","warn"); return 1; });
-  take(rank(s.theirs).filter(([,e])=>e.p>=MIN_SAMPLE&&pct(e.w,e.p)<=30),
-    (id,e)=>{ add("Kewalahan lawan "+hName(id)+": menang "+e.w+" dari "+e.p
-      +" game waktu hero itu di seberang.","warn"); return 1; });
-  /* ban digabung jadi satu baris: tiga kalimat yang nyaris sama cuma bikin
-     catatan ini panjang tanpa nambah informasi */
-  const hot=rank(s.theirBans).filter(([,e])=>e.p>=3&&e.p*2>=G).slice(0,CAP);
-  if(hot.length){
-    const names=hot.map(([id])=>hName(id));
-    add("Lawan hampir selalu ban "+names.join(", ")+" ("+hot[0][1].p+" dari "+G+" game) — hero itu dianggap ancaman.");
-  }
-  if(!ul.children.length){
-    add(G?"Belum ada pola yang cukup kuat buat disimpulin. Butuh minimal "+MIN_SAMPLE
-      +" game per hero; sekarang baru "+G+" game kecatat."
-      :"Belum ada game yang kecatat buat tim ini.");
-  }
-  sec.appendChild(ul);
-  return sec;
-}
 function renderTeamList(){
   const dl=$("teamList"); if(!dl) return;
   dl.textContent="";
