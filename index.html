@@ -955,6 +955,26 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 /* standalone-only */
 .warnstore{background:var(--lock-tint);color:var(--lock)}
 
+/* ---- tier list ---- */
+.tiers{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0;overflow-y:auto;
+  scrollbar-width:thin;padding-right:2px}
+.tier{display:flex;gap:0;background:var(--sunk);border-radius:14px;overflow:hidden;min-height:84px}
+.tlab{flex:0 0 62px;display:grid;place-items:center;font-size:26px;font-weight:800;
+  color:rgba(0,0,0,.72);letter-spacing:-.02em;user-select:none}
+.tdrop{flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;gap:7px;padding:8px 10px;
+  align-content:flex-start;align-items:flex-start}
+.tdrop.over{background:var(--track);box-shadow:inset 0 0 0 2px var(--ink-dim)}
+.tempty{font-size:12px;color:var(--ink-dim);align-self:center;font-weight:600}
+.tdrop .hc{width:64px;flex:0 0 auto;--tile:64px;touch-action:none}
+.tdrop .hc .cn{padding:12px 3px 4px}
+.tchip{cursor:grab}
+.hc.tdragging{opacity:.3}
+.hc.tghost{position:fixed;z-index:200;pointer-events:none;--tile:64px;width:64px;
+  box-shadow:0 10px 26px rgba(0,0,0,.45);transform:rotate(-3deg)}
+body.tdragon{cursor:grabbing;user-select:none}
+#tierPool .hc.tsel{box-shadow:0 0 0 3px var(--ink),var(--lift-sm)}
+#tierRows{margin-top:4px}
+
 </style>
 </head>
 <body>
@@ -975,6 +995,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
       <button role="tab" id="tabSim" aria-selected="false">Simulasi</button>
       <button role="tab" id="tabHero" aria-selected="false">Hero</button>
       <button role="tab" id="tabRel" aria-selected="false">Relasi</button>
+      <button role="tab" id="tabTier" aria-selected="false">Tier</button>
       <button role="tab" id="tabBoard" aria-selected="false">Papan</button>
       <button role="tab" id="tabTeam" aria-selected="false">Tim</button>
     </div>
@@ -1298,6 +1319,42 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
         </div>
         <p class="armnote" id="armNote"></p>
         <div class="grid" id="relGrid"></div>
+      </section>
+    </div>
+   </div>
+  </div>
+
+  <!-- ============ TIER LIST ============ -->
+  <div class="view" id="viewTier" hidden>
+   <div class="panes">
+    <div class="pane left">
+      <section class="card flex">
+        <div class="hhead">
+          <div>
+            <h2>Tier List</h2>
+            <p>Tiap role punya tier list sendiri. Seret hero dari kanan ke barisnya, atau klik heronya terus klik barisnya.</p>
+          </div>
+          <span class="sp"></span>
+          <span class="saved" id="savedTier">Tersimpan otomatis</span>
+        </div>
+        <div class="galbar">
+          <div class="pills" id="tierRoles"></div>
+          <span class="sp"></span>
+          <button class="pill" id="tierShot">Simpan gambar</button>
+          <button class="pill danger" id="tierClear">Kosongin</button>
+        </div>
+        <div class="tiers" id="tierRows"></div>
+        <p class="note sm" id="tierHint"></p>
+      </section>
+    </div>
+
+    <div class="pane right">
+      <section class="card flex">
+        <div class="galbar">
+          <div class="search"><input type="search" id="tq" placeholder="Cari hero…" autocomplete="off"></div>
+          <span class="galcount" id="tierCount"></span>
+        </div>
+        <div class="grid" id="tierPool"></div>
       </section>
     </div>
    </div>
@@ -1818,7 +1875,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="ae995b71";   /* diisi pas build */
+const APP_VER="8b972172";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -1832,7 +1889,7 @@ function markSaved(ok){
   const t=new Date();
   const txt=ok===false ? "Kesimpen di browser ini aja"
                        : "✓ Tersimpan "+pad2(t.getHours())+":"+pad2(t.getMinutes());
-  ["savedRel","savedHero"].forEach(id=>{
+  ["savedRel","savedHero","savedTier"].forEach(id=>{
     const el=$(id); if(!el) return;
     el.textContent=txt;
     el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
@@ -2785,9 +2842,18 @@ async function exportAll(){
     if(b.bg){ o.bg="images/maps/"+b.id; want.set(b.bg,"images/maps/"+b.id); }
     return o;
   });
+  /* tier list ikut dibackup: role yang belum pernah dibuka diambil dari
+     store dulu, biar backup-nya lengkap walau tab-nya belum disentuh */
+  await Promise.all(TIER_ROLES.map(([r])=>tierLoad(r).catch(()=>{})));
+  const tiersOut={};
+  TIER_ROLES.forEach(([r])=>{
+    const d=tierBook[r];
+    if(d&&TIER_DEF.some(([k])=>arr(d[k]).length)) tiersOut[r]=d;
+  });
+
   zip.file("data.json",JSON.stringify({
     version:1,exportedAt:new Date().toISOString(),
-    heroes:heroesOut,teams:teamsOut,boards:boardsOut,series:S
+    heroes:heroesOut,teams:teamsOut,boards:boardsOut,series:S,tiers:tiersOut
   },null,1));
 
   let ok=0,fail=0,i=0;
@@ -3613,18 +3679,21 @@ function setView(v){
   $("viewDraft").hidden = v!=="draft";
   $("viewHero").hidden  = v!=="hero";
   $("viewRel").hidden   = v!=="rel";
+  $("viewTier").hidden  = v!=="tier";
   $("viewBoard").hidden = v!=="board";
   $("viewTeam").hidden  = v!=="team";
   $("viewSim").hidden   = v!=="sim";
   $("tabDraft").setAttribute("aria-selected",String(v==="draft"));
   $("tabHero").setAttribute("aria-selected",String(v==="hero"));
   $("tabRel").setAttribute("aria-selected",String(v==="rel"));
+  $("tabTier").setAttribute("aria-selected",String(v==="tier"));
   $("tabBoard").setAttribute("aria-selected",String(v==="board"));
   $("tabTeam").setAttribute("aria-selected",String(v==="team"));
   $("tabSim").setAttribute("aria-selected",String(v==="sim"));
   try{ if(location.hash.replace("#","")!==v) history.replaceState(null,"","#"+v); }catch(e){}
   if(v==="hero"){ renderHeroList(); renderMeters(); }
   if(v==="rel"){ relGridBuilt=false; renderRel(); renderRelGrid(); }
+  if(v==="tier"){ openTier(); }
   if(v==="board"){ bGridBuilt=false; renderWhiteboard(); renderBGrid(); }
   if(v==="team"){ renderTeams(); }
   if(v==="sim"){ simGridBuilt=false; simRender(); }
@@ -3976,6 +4045,15 @@ async function importZip(file){
     for(const b of boards){ b.bg=fixImg(b.bg)||null; await store.doc("boards/"+b.id).set(b); }
     curBoard=boards[0];
   }
+  if(d.tiers&&typeof d.tiers==="object"){
+    for(const [r] of TIER_ROLES){
+      if(!d.tiers[r]) continue;
+      tierBook[r]=tierFix(d.tiers[r]);
+      try{ localStorage.setItem("hokdraft.tier."+r,JSON.stringify(tierBook[r])); }catch(e){}
+      await store.doc("tier/"+r).set(tierBook[r]);
+    }
+    tierPoolBuilt=false;
+  }
   const imported=migrate(d.series);
   if(imported){
     S=imported;
@@ -3983,6 +4061,7 @@ async function importZip(file){
     await store.doc("state/series").set(S);
   }
   lsSave(); renderTeamList(); render();
+  if(view==="tier") openTier();
   toast("Beres — "+n+" gambar, "+(d.heroes||[]).length+" hero, "+(d.teams||[]).length+" tim.");
 }
 function guessType(p){
@@ -4966,8 +5045,340 @@ $("tabDraft").onclick=()=>setView("draft");
 $("tabSim").onclick=()=>setView("sim");
 $("tabHero").onclick=()=>setView("hero");
 $("tabRel").onclick=()=>setView("rel");
+$("tabTier").onclick=()=>setView("tier");
 $("tabBoard").onclick=()=>setView("board");
 $("tabTeam").onclick=()=>setView("team");
+
+/* ══════════════════════════ TIER LIST ══════════════════════════
+   Satu tier list per role, kesimpen kepisah (tier/jungle, tier/mid, …),
+   jadi ganti role bukan nyaring daftar yang sama — tiap role emang punya
+   urutan sendiri. Hero yang udah ketaro ilang dari kolam di kanan biar
+   nggak kepasang dua kali.                                               */
+const TIER_DEF=[["s","S","#e0484d"],["a","A","#e0893f"],["b","B","#d9c441"],
+                ["c","C","#67b85c"],["d","D","#4d8fd6"]];
+const TIER_ROLES=[["all","Semua"],...LANES.map(l=>[l,LN[l]])];
+let tierRole="all", tierQuery="", tierPick=null, tierPoolBuilt=false;
+const tierBook={};                    /* role -> {s:[],a:[],b:[],c:[],d:[]} */
+let tierTimer=null;
+
+function tierBlank(){ const o={}; TIER_DEF.forEach(([k])=>o[k]=[]); return o; }
+function tierOf(role){ return tierBook[role]||(tierBook[role]=tierBlank()); }
+function tierFix(v){
+  const o=tierBlank();
+  if(v&&typeof v==="object") TIER_DEF.forEach(([k])=>{
+    o[k]=arr(v[k]).filter(id=>typeof id==="string"&&byId.has(id));
+  });
+  /* hero yang kedobel antar baris cuma dipegang baris pertama */
+  const seen=new Set();
+  TIER_DEF.forEach(([k])=>{ o[k]=o[k].filter(id=>!seen.has(id)&&seen.add(id)); });
+  return o;
+}
+function tierSave(){
+  const role=tierRole, snap=JSON.parse(JSON.stringify(tierOf(role)));
+  try{ localStorage.setItem("hokdraft.tier."+role,JSON.stringify(snap)); }catch(e){}
+  clearTimeout(tierTimer);
+  tierTimer=setTimeout(()=>{
+    store.doc("tier/"+role).set(snap).then(()=>markSaved(true)).catch(()=>markSaved(false));
+  },400);
+}
+async function tierLoad(role){
+  if(tierBook[role]) return;
+  let v=null;
+  try{ const r=localStorage.getItem("hokdraft.tier."+role); if(r) v=JSON.parse(r); }catch(e){}
+  try{
+    const d=await store.doc("tier/"+role).get();
+    const data=d&&(d.data!==undefined?d.data:d);
+    if(data&&typeof data==="object") v=data;
+  }catch(e){}
+  tierBook[role]=tierFix(v);
+}
+
+/* hero yang muat di tier list role ini */
+function tierEligible(h){ return tierRole==="all" ? true : lanesOf(h).includes(tierRole); }
+function tierPlaced(){
+  const m=new Map(); const d=tierOf(tierRole);
+  TIER_DEF.forEach(([k])=>arr(d[k]).forEach(id=>m.set(id,k)));
+  return m;
+}
+function tierRemove(id){
+  const d=tierOf(tierRole);
+  TIER_DEF.forEach(([k])=>{ const i=d[k].indexOf(id); if(i>=0) d[k].splice(i,1); });
+}
+function tierPut(id,key,at){
+  const h=byId.get(id); if(!h||!tierEligible(h)) return;
+  tierRemove(id);
+  const row=tierOf(tierRole)[key]; if(!row) return;
+  const i=(at==null||at<0||at>row.length)?row.length:at;
+  row.splice(i,0,id);
+  tierSave(); renderTier();
+}
+function tierToPool(id){ tierRemove(id); tierSave(); renderTier(); }
+
+function tierChip(h){
+  const b=document.createElement("button"); b.type="button"; b.className="hc tchip"; b.dataset.id=h.id;
+  b.appendChild(portrait(h));
+  const n=document.createElement("span"); n.className="cn"; n.textContent=h.name; b.appendChild(n);
+  b.title=h.name+" — klik buat balikin ke kolam, atau seret ke baris lain";
+  return b;
+}
+function renderTierRows(){
+  const box=$("tierRows"); box.textContent="";
+  const d=tierOf(tierRole);
+  TIER_DEF.forEach(([k,label,col])=>{
+    const row=document.createElement("div"); row.className="tier"; row.dataset.k=k;
+    const lab=document.createElement("div"); lab.className="tlab"; lab.style.background=col;
+    lab.textContent=label; row.appendChild(lab);
+    const drop=document.createElement("div"); drop.className="tdrop"; drop.dataset.k=k;
+    arr(d[k]).forEach(id=>{ const h=byId.get(id); if(h) drop.appendChild(tierChip(h)); });
+    if(!drop.children.length){
+      const e=document.createElement("span"); e.className="tempty";
+      e.textContent=tierPick?"Klik di sini buat naro "+(byId.get(tierPick)||{name:"hero"}).name:"Kosong";
+      drop.appendChild(e);
+    }
+    row.appendChild(drop); box.appendChild(row);
+  });
+}
+function buildTierPool(){
+  emitGallery($("tierPool"),h=>{
+    const b=document.createElement("button"); b.type="button"; b.className="hc"; b.dataset.id=h.id;
+    b.appendChild(portrait(h));
+    const mk=document.createElement("span"); mk.className="marks"; b.appendChild(mk);
+    const n=document.createElement("span"); n.className="cn"; n.textContent=h.name; b.appendChild(n);
+    return b;
+  });
+  const e=document.createElement("p"); e.className="gridempty"; e.id="tierEmpty"; e.hidden=true;
+  e.textContent="Semua hero role ini udah ketaro.";
+  $("tierPool").appendChild(e);
+  tierPoolBuilt=true;
+}
+function renderTierPool(){
+  if(!tierPoolBuilt) buildTierPool();
+  const q=norm(tierQuery), placed=tierPlaced(); let shown=0;
+  [...$("tierPool").querySelectorAll(".hc")].forEach(b=>{
+    const h=byId.get(b.dataset.id); if(!h){ b.hidden=true; return; }
+    const ok=tierEligible(h)&&!placed.has(h.id)&&(!q||norm(h.name).includes(q));
+    b.hidden=!ok; if(ok) shown++;
+    b.classList.toggle("tsel",tierPick===h.id);
+  });
+  $("tierEmpty").hidden=shown>0;
+  syncHeads($("tierPool"),tierRole!=="all");
+  $("tierCount").textContent=shown+" hero";
+}
+function renderTier(){
+  [...$("tierRoles").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===tierRole)));
+  renderTierRows(); renderTierPool();
+  const n=TIER_DEF.reduce((a,[k])=>a+arr(tierOf(tierRole)[k]).length,0);
+  $("tierHint").textContent = tierPick
+    ? "→ Sekarang klik baris tujuannya."
+    : n ? n+" hero ketaro. Klik hero di baris buat balikin ke kolam."
+        : "Seret hero dari kanan, atau klik heronya dulu baru klik barisnya.";
+}
+async function openTier(){
+  await tierLoad(tierRole);
+  tierPoolBuilt=false; tierPick=null;
+  renderTier();
+}
+
+/* ---- seret-taro: satu jalur buat mouse dan sentuh ---- */
+let tdrag=null;
+function tierRowAt(x,y){
+  const el=document.elementFromPoint(x,y);
+  return el?el.closest(".tdrop"):null;
+}
+function tierIndexAt(drop,x){
+  const kids=[...drop.querySelectorAll(".hc")];
+  for(let i=0;i<kids.length;i++){
+    const r=kids[i].getBoundingClientRect();
+    if(x<r.left+r.width/2) return i;
+  }
+  return kids.length;
+}
+function tierDragStart(e,id,from){
+  if(e.button!==undefined&&e.button!==0) return;
+  tdrag={id,from,x0:e.clientX,y0:e.clientY,live:false,ghost:null,src:e.currentTarget};
+}
+function tierDragMove(e){
+  if(!tdrag) return;
+  if(!tdrag.live){
+    if(Math.abs(e.clientX-tdrag.x0)+Math.abs(e.clientY-tdrag.y0)<6) return;
+    tdrag.live=true;
+    const g=tdrag.src.cloneNode(true);
+    g.className="hc tghost"; g.style.width="64px";
+    document.body.appendChild(g); tdrag.ghost=g;
+    tdrag.src.classList.add("tdragging");
+    document.body.classList.add("tdragon");
+  }
+  e.preventDefault();
+  tdrag.ghost.style.left=(e.clientX-32)+"px";
+  tdrag.ghost.style.top=(e.clientY-32)+"px";
+  const drop=tierRowAt(e.clientX,e.clientY);
+  document.querySelectorAll(".tdrop.over").forEach(d=>d.classList.remove("over"));
+  if(drop) drop.classList.add("over");
+}
+function tierDragEnd(e){
+  if(!tdrag) return;
+  const d=tdrag; tdrag=null;
+  document.querySelectorAll(".tdrop.over").forEach(x=>x.classList.remove("over"));
+  document.body.classList.remove("tdragon");
+  if(d.ghost) d.ghost.remove();
+  if(d.src) d.src.classList.remove("tdragging");
+  if(!d.live){                       /* nggak digeser = klik biasa */
+    if(d.from==="pool"){ tierPick = tierPick===d.id ? null : d.id; renderTier(); }
+    else tierToPool(d.id);
+    return;
+  }
+  const drop=tierRowAt(e.clientX,e.clientY);
+  if(drop) tierPut(d.id,drop.dataset.k,tierIndexAt(drop,e.clientX));
+  else if(d.from!=="pool"&&!(e.target&&e.target.closest&&e.target.closest(".tdrop"))) tierToPool(d.id);
+  else renderTier();
+}
+document.addEventListener("pointermove",tierDragMove,{passive:false});
+document.addEventListener("pointerup",tierDragEnd);
+document.addEventListener("pointercancel",e=>{ if(tdrag) tierDragEnd(e); });
+
+$("tierPool").addEventListener("pointerdown",e=>{
+  const b=e.target.closest(".hc"); if(!b||b.hidden) return;
+  tierDragStart(e,b.dataset.id,"pool");
+});
+$("tierRows").addEventListener("pointerdown",e=>{
+  const b=e.target.closest(".hc");
+  if(b){ tierDragStart(e,b.dataset.id,"tier"); return; }
+  const drop=e.target.closest(".tdrop");
+  if(drop&&tierPick){ const id=tierPick; tierPick=null; tierPut(id,drop.dataset.k,null); }
+});
+
+TIER_ROLES.forEach(([v,t])=>{
+  const b=document.createElement("button"); b.type="button"; b.dataset.v=v; b.textContent=t;
+  b.setAttribute("aria-pressed",String(v==="all"));
+  b.onclick=async()=>{ tierRole=v; tierPick=null; await tierLoad(v); renderTier(); };
+  $("tierRoles").appendChild(b);
+});
+$("tq").oninput=e=>{ tierQuery=e.target.value; renderTierPool(); };
+let tierArm=0;
+$("tierClear").onclick=()=>{
+  if(Date.now()>tierArm){ tierArm=Date.now()+3000; $("tierClear").textContent="Yakin? Klik lagi"; return; }
+  tierArm=0; $("tierClear").textContent="Kosongin";
+  tierBook[tierRole]=tierBlank(); tierPick=null; tierSave(); renderTier();
+  toast("Tier list "+(TIER_ROLES.find(r=>r[0]===tierRole)||[,""])[1]+" dikosongin.");
+};
+
+/* ---- simpan jadi gambar ----
+   Gambar hero-nya diambil lewat getImageBlob dulu, bukan langsung dari URL
+   Supabase: canvas yang kena gambar lintas-domain jadi "tainted" dan toBlob
+   bakal ngelempar error. Lewat blob, sumbernya jadi satu domain. Hero yang
+   gambarnya gagal diambil digambar pake inisial, bukan bikin gagal semua. */
+function rrect(c,x,y,w,h,r){
+  c.beginPath();
+  c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r);
+  c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  c.lineTo(x+r,y+h); c.quadraticCurveTo(x,y+h,x,y+h-r);
+  c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y); c.closePath();
+}
+function cssVar(n,d){
+  const v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  return v||d;
+}
+async function tierImage(){
+  const d=tierOf(tierRole);
+  const ids=TIER_DEF.reduce((a,[k])=>a.concat(arr(d[k])),[]);
+  const pics=new Map();
+  await Promise.all(ids.map(async id=>{
+    const h=byId.get(id); if(!h||!h.img) return;
+    try{
+      const b=await getImageBlob(h.img); if(!b) return;
+      const url=URL.createObjectURL(b);
+      const im=new Image(); im.src=url;
+      await (im.decode?im.decode():new Promise(r=>{ im.onload=r; im.onerror=r; }));
+      pics.set(id,{im,url});
+    }catch(e){}
+  }));
+
+  const S2=2, PAD=26, LAB=104, GAP=10, CH=96, NAME=20, W=1180;
+  const inner=W-PAD*2-LAB-GAP;
+  const per=Math.max(1,Math.floor((inner+GAP)/(CH+GAP)));
+  const head=86;
+  const rowH=k=>{
+    const n=arr(d[k]).length;
+    const lines=Math.max(1,Math.ceil(n/per));
+    return lines*(CH+NAME)+(lines-1)*GAP+GAP*2;
+  };
+  const H=head+TIER_DEF.reduce((a,[k])=>a+rowH(k)+GAP,0)+PAD;
+
+  const cv=document.createElement("canvas");
+  cv.width=W*S2; cv.height=H*S2;
+  const c=cv.getContext("2d"); c.scale(S2,S2);
+  const bg=cssVar("--bg","#101214"), panel=cssVar("--panel","#191c1f");
+  const ink=cssVar("--ink","#e9edf0"), dim=cssVar("--ink-dim","#8b949c");
+  c.fillStyle=bg; c.fillRect(0,0,W,H);
+
+  const roleName=(TIER_ROLES.find(r=>r[0]===tierRole)||[,"Semua"])[1];
+  c.fillStyle=ink; c.font="800 30px system-ui,sans-serif"; c.textBaseline="top";
+  c.fillText("TIER LIST · "+roleName.toUpperCase(),PAD,PAD);
+  const t=new Date();
+  c.fillStyle=dim; c.font="600 14px system-ui,sans-serif";
+  c.fillText(t.getDate()+" "+["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"][t.getMonth()]
+    +" "+t.getFullYear()+" · HOK Draft Board",PAD,PAD+38);
+
+  let y=head;
+  TIER_DEF.forEach(([k,label,col])=>{
+    const h=rowH(k);
+    c.fillStyle=panel; rrect(c,PAD,y,W-PAD*2,h,14); c.fill();
+    c.fillStyle=col; rrect(c,PAD,y,LAB,h,14); c.fill();
+    c.fillStyle="#12141600";
+    c.fillStyle="rgba(0,0,0,.72)"; c.font="800 40px system-ui,sans-serif";
+    c.textAlign="center"; c.textBaseline="middle";
+    c.fillText(label,PAD+LAB/2,y+h/2);
+    c.textAlign="left"; c.textBaseline="top";
+
+    arr(d[k]).forEach((id,i)=>{
+      const hh=byId.get(id); if(!hh) return;
+      const cx=PAD+LAB+GAP+(i%per)*(CH+GAP);
+      const cy=y+GAP+Math.floor(i/per)*(CH+NAME+GAP);
+      c.save(); rrect(c,cx,cy,CH,CH,14); c.clip();
+      const p=pics.get(id);
+      if(p&&p.im.naturalWidth){
+        const r=Math.max(CH/p.im.naturalWidth,CH/p.im.naturalHeight);
+        const w=p.im.naturalWidth*r, hgt=p.im.naturalHeight*r;
+        c.drawImage(p.im,cx+(CH-w)/2,cy+(CH-hgt)/2,w,hgt);
+      }else{
+        const hu=hue(hh.name);
+        const g=c.createLinearGradient(cx,cy,cx+CH,cy+CH);
+        g.addColorStop(0,"hsl("+hu+" 38% 56%)");
+        g.addColorStop(1,"hsl("+((hu+40)%360)+" 42% 40%)");
+        c.fillStyle=g; c.fillRect(cx,cy,CH,CH);
+        c.fillStyle="#fff"; c.font="800 30px system-ui,sans-serif";
+        c.textAlign="center"; c.textBaseline="middle";
+        c.fillText(monogram(hh.name),cx+CH/2,cy+CH/2);
+        c.textAlign="left"; c.textBaseline="top";
+      }
+      c.restore();
+      c.fillStyle=ink; c.font="700 12px system-ui,sans-serif";
+      c.textAlign="center";
+      let nm=hh.name;
+      while(c.measureText(nm).width>CH+6&&nm.length>3) nm=nm.slice(0,-1);
+      if(nm!==hh.name) nm=nm.slice(0,-1)+"…";
+      c.fillText(nm,cx+CH/2,cy+CH+5);
+      c.textAlign="left";
+    });
+    y+=h+GAP;
+  });
+  pics.forEach(p=>URL.revokeObjectURL(p.url));
+  return new Promise(res=>cv.toBlob(res,"image/png"));
+}
+$("tierShot").onclick=async()=>{
+  const btn=$("tierShot"); btn.disabled=true; btn.textContent="Ngegambar…";
+  try{
+    const blob=await tierImage();
+    if(!blob) throw new Error("kosong");
+    const role=(TIER_ROLES.find(r=>r[0]===tierRole)||[,"semua"])[1].toLowerCase();
+    await saveFile("tierlist-"+role+".png",blob);
+    toast("Gambar kesimpen.");
+  }catch(e){
+    console.error("gagal bikin gambar tier list",e);
+    toast("Gagal bikin gambar — cek console.");
+  }
+  btn.disabled=false; btn.textContent="Simpan gambar";
+};
 
 /* board wiring */
 ["#ff4d4d","#4d9bff","#ffd24d","#4ddb8a","#ffffff","#15181a"].forEach((c,i)=>{
@@ -5119,7 +5530,7 @@ if(cached&&cached.S&&!restored) setTimeout(()=>toast("Model tim diperbarui — s
 verStart();
 scoutLoad();
 const h0=location.hash.replace("#","");
-setView(["hero","rel","board","team","sim"].includes(h0)?h0:"draft");
+setView(["hero","rel","tier","board","team","sim"].includes(h0)?h0:"draft");
 
 (async()=>{
   try{
