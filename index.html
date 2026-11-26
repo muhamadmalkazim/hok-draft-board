@@ -13,7 +13,7 @@
 <style>
 /* reset that the artifact host used to provide */
 *{box-sizing:border-box}
-:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root{--ui:0.67;color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 /* Semua ukuran di file ini ditulis pas zoom browser 100%, tapi tampilan yang
    enak dipakainya di 67% — itu yang kepakai sehari-hari. Daripada ngubah
    ratusan angka px satu-satu (dan bikin border 1px jadi 0.67px yang burem),
@@ -640,12 +640,26 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .widths button[aria-pressed="true"]{background:var(--ink)}
 .widths button i{display:block;background:var(--ink-mid);border-radius:999px}
 .widths button[aria-pressed="true"] i{background:var(--panel)}
-.boardwrap{position:relative;width:100%;aspect-ratio:var(--bar,1.55);max-height:var(--bmax,calc(100vh - 275px));
+/* Bingkainya WAJIB persis serasio mapnya: gambarnya object-fit:fill supaya
+   titik 0..1 di papan jatuh tepat di titik yang sama di map. Begitu rasio
+   bingkainya meleset, mapnya ketarik dan posisi token jadi bohong.
+
+   Makanya yang dibatasi lebarnya, bukan tingginya. max-height bikin tinggi
+   kepotong sementara lebarnya tetap 100% — rasionya langsung rusak. Dengan
+   max-width, paling parah papannya mengecil, tapi rasionya nggak pernah
+   berubah.
+
+   Pembagian /var(--ui) itu bukan hiasan: 100vh nggak ikut kezoom. Di dalam
+   body yang dizoom 0.67, 100vh cuma kebaca 67% dari tinggi layar beneran,
+   dan jatah tingginya jadi kurang sepertiga. */
+.boardwrap{--bmax:calc(100vh / var(--ui,0.67) - 362px);
+  position:relative;width:100%;aspect-ratio:var(--bar,1.55);
+  max-width:calc(var(--bmax) * var(--bar,1.55));
   margin:0 auto;border-radius:20px;overflow:hidden;
   background:var(--sunk);box-shadow:var(--lift-sm);touch-action:none;user-select:none}
 .boardbg{position:absolute;inset:0;pointer-events:none}
 .boardbg img{width:100%;height:100%;object-fit:fill;display:block}
-.boardwrap:fullscreen{max-height:100vh;height:100vh;width:auto;border-radius:0}
+.boardwrap:fullscreen{max-width:none;max-height:100vh;height:100vh;width:auto;border-radius:0}
 .boardwrap:fullscreen .boardbg img{object-fit:contain}
 .bhint{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;gap:7px;
   align-items:center;justify-content:center;pointer-events:none;text-align:center;padding:20px}
@@ -1990,7 +2004,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="ad0570d3";   /* diisi pas build */
+const APP_VER="aafcdfc9";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
