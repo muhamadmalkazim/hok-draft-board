@@ -14,7 +14,16 @@
 /* reset that the artifact host used to provide */
 *{box-sizing:border-box}
 :root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-body{margin:0;font:14px/1.5 system-ui,sans-serif}
+/* Semua ukuran di file ini ditulis pas zoom browser 100%, tapi tampilan yang
+   enak dipakainya di 67% — itu yang kepakai sehari-hari. Daripada ngubah
+   ratusan angka px satu-satu (dan bikin border 1px jadi 0.67px yang burem),
+   zoom-nya dipasang di sini. Efeknya persis sama kayak zoom browser.
+
+   Yang perlu diinget: getBoundingClientRect ikut kezoom (jadi hitungan
+   relPos dan canvas tetap bener apa adanya), TAPI elemen position:fixed
+   yang diatur dari clientX harus dibagi uiScale() dulu — satuan px di
+   dalam konteks yang kezoom itu lebih kecil. */
+body{margin:0;font:14px/1.5 system-ui,sans-serif;zoom:var(--ui,0.67)}
 img{max-width:100%}
 [hidden]{display:none!important}
 
@@ -989,6 +998,13 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 .tdrop.over{background:var(--track);box-shadow:inset 0 0 0 2px var(--ink-dim)}
 .tempty{font-size:12px;color:var(--ink-dim);align-self:center;font-weight:600}
 .tdrop .hc{width:64px;flex:0 0 auto;--tile:64px;touch-action:none}
+/* kartu di kolam juga nggak boleh ikut nggulung halaman waktu diseret pake
+   jari — kolamnya tetap bisa digulung lewat area kosongnya */
+#tierPool .hc{touch-action:none}
+/* penanda tempat jatuh: garis tegak setinggi kartu, nyempil di antara dua
+   kartu persis di posisi yang bakal kepakai */
+.tmark{flex:0 0 auto;width:4px;height:64px;border-radius:999px;background:var(--ink);
+  box-shadow:0 0 10px var(--ink);align-self:flex-start}
 .tdrop .hc .cn{padding:12px 3px 4px}
 .tchip{cursor:grab}
 .hc.tdragging{opacity:.3}
@@ -997,6 +1013,22 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
 body.tdragon{cursor:grabbing;user-select:none}
 #tierPool .hc.tsel{box-shadow:0 0 0 3px var(--ink),var(--lift-sm)}
 #tierRows{margin-top:4px}
+
+/* ---- pengatur ukuran tampilan ---- */
+.uiscale{display:inline-flex;align-items:center;gap:2px;background:var(--track);
+  border-radius:999px;padding:3px 4px}
+.uiscale button{width:24px;height:24px;border-radius:50%;font-size:14px;font-weight:800;
+  color:var(--ink);background:transparent;line-height:1}
+.uiscale button:hover:not(:disabled){background:var(--panel)}
+.uiscale button:disabled{opacity:.3;cursor:not-allowed}
+.uiscale .uiv{font-size:11px;font-weight:800;min-width:34px;text-align:center;
+  font-variant-numeric:tabular-nums;color:var(--ink-mid)}
+
+/* ---- pilih banyak token sekaligus ---- */
+.boardcv.sel{cursor:crosshair}
+.marq{position:absolute;z-index:8;pointer-events:none;border:1.5px dashed var(--ink);
+  background:rgba(125,125,125,.14);border-radius:4px}
+.pill.on{background:var(--ink);color:var(--panel)}
 
 </style>
 </head>
@@ -1023,6 +1055,11 @@ body.tdragon{cursor:grabbing;user-select:none}
       <button role="tab" id="tabTeam" aria-selected="false">Tim</button>
     </div>
     <span class="saved" id="storeBadge">…</span>
+    <div class="uiscale" id="uiScale">
+      <button type="button" id="uiDown" title="Kecilin tampilan">−</button>
+      <span class="uiv" id="uiVal">67%</span>
+      <button type="button" id="uiUp" title="Gedein tampilan">+</button>
+    </div>
     <button class="pill" id="btnTheme">Mode gelap</button>
   </header>
 
@@ -1403,6 +1440,7 @@ body.tdragon{cursor:grabbing;user-select:none}
             <button type="button" data-v="6" aria-pressed="false"><i style="width:14px;height:6px"></i></button>
             <button type="button" data-v="11" aria-pressed="false"><i style="width:14px;height:10px"></i></button>
           </div>
+          <button class="pill" id="toolSelect">Pilih</button>
           <button class="pill" id="toolErase">Hapus coretan</button>
           <button class="pill" id="boardUndo">Undo</button>
           <button class="pill" id="boardClear">Bersihin</button>
@@ -1905,7 +1943,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="e2f93342";   /* diisi pas build */
+const APP_VER="77644a4d";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -2685,23 +2723,32 @@ function drawStrokes(){
    satu dari dua tempat itu. Token lama nggak punya field ini — dianggep 1,
    jadi papan yang udah ada nggak berubah tampilannya. */
 const TOK_MIN=0.5, TOK_MAX=3, TOK_STEP=0.15;
-let selTok=null;
+/* Pilihan disimpen sebagai kumpulan indeks, bukan satu indeks. Nyusun
+   rotasi itu kerjaan kelompok: lima hero geser bareng ke satu lane, bukan
+   satu-satu. Satu token kepilih cuma kasus khusus dari kumpulan isi satu. */
+const selToks=new Set();
 const tokK=t=>{ const k=+(t&&t.k); return k>=TOK_MIN&&k<=TOK_MAX?k:1; };
+const selList=()=>[...selToks].filter(i=>curBoard&&curBoard.tokens[i]).sort((a,b)=>a-b);
 
 function renderTokens(){
   const w=$("boardWrap");
   [...w.querySelectorAll(".tok")].forEach(n=>n.remove());
   if(!curBoard){ renderTokSize(); return; }
-  if(selTok!=null&&!curBoard.tokens[selTok]) selTok=null;
+  [...selToks].forEach(i=>{ if(!curBoard.tokens[i]) selToks.delete(i); });
+  const one=selToks.size===1;
   curBoard.tokens.forEach((t,i)=>{
     const h=byId.get(t.id);
+    const on=selToks.has(i);
     const b=document.createElement("button"); b.type="button";
-    b.className="tok "+(t.s||"n")+(i===selTok?" sel":""); b.dataset.i=i;
+    b.className="tok "+(t.s||"n")+(on?" sel":""); b.dataset.i=i;
     b.style.left=(t.x*100)+"%"; b.style.top=(t.y*100)+"%";
     b.style.setProperty("--k",String(tokK(t)));
-    b.title=(h?h.name:t.id)+" — tarik buat mindahin, scroll buat gedein/kecilin, klik kanan buat hapus";
+    b.title=(h?h.name:t.id)+" — tarik buat mindahin, scroll buat ukuran, "
+      +"shift+klik buat nambah ke pilihan, klik kanan buat hapus";
     b.appendChild(portrait(h||{name:t.id,img:null}));
-    if(i===selTok){
+    /* gagang cuma muncul kalau yang kepilih satu: narik gagang buat sekelompok
+       token nggak jelas mau diukur dari mana — buat kelompok pakai tombol -/+ */
+    if(on&&one){
       const g=document.createElement("span"); g.className="tokgrip"; g.dataset.i=i;
       g.title="Tarik buat ngatur ukuran";
       b.appendChild(g);
@@ -2712,14 +2759,22 @@ function renderTokens(){
 }
 function renderTokSize(){
   const box=$("tokSize");
-  const t=curBoard&&selTok!=null?curBoard.tokens[selTok]:null;
-  box.hidden=!t;
-  if(!t) return;
-  const h=byId.get(t.id);
-  $("tokSizeName").textContent=h?h.name:t.id;
-  $("tokSizeVal").textContent=Math.round(tokK(t)*100)+"%";
-  $("tokSmaller").disabled=tokK(t)<=TOK_MIN+1e-6;
-  $("tokBigger").disabled=tokK(t)>=TOK_MAX-1e-6;
+  const sel=selList();
+  box.hidden=!sel.length;
+  if(!sel.length) return;
+  const ks=sel.map(i=>tokK(curBoard.tokens[i]));
+  if(sel.length===1){
+    const t=curBoard.tokens[sel[0]], h=byId.get(t.id);
+    $("tokSizeName").textContent=h?h.name:t.id;
+    $("tokSizeVal").textContent=Math.round(ks[0]*100)+"%";
+  }else{
+    $("tokSizeName").textContent=sel.length+" hero";
+    const lo=Math.min(...ks), hi=Math.max(...ks);
+    $("tokSizeVal").textContent = lo===hi ? Math.round(lo*100)+"%"
+      : Math.round(lo*100)+"–"+Math.round(hi*100)+"%";
+  }
+  $("tokSmaller").disabled=Math.min(...ks)<=TOK_MIN+1e-6;
+  $("tokBigger").disabled=Math.max(...ks)>=TOK_MAX-1e-6;
 }
 function setTokK(i,k,save){
   const t=curBoard&&curBoard.tokens[i]; if(!t) return;
@@ -2730,13 +2785,48 @@ function setTokK(i,k,save){
   if(save!==false) saveBoard();
 }
 function bumpTok(step){
-  if(selTok==null) return;
-  const t=curBoard&&curBoard.tokens[selTok]; if(!t) return;
-  setTokK(selTok,tokK(t)+step);
+  const sel=selList(); if(!sel.length) return;
+  sel.forEach(i=>setTokK(i,tokK(curBoard.tokens[i])+step,false));
+  renderTokSize(); saveBoard();
 }
-function selectTok(i){
-  selTok = (i===selTok) ? null : i;
-  renderTokens();
+/* Pilihan diubah tanpa ngebangun ulang elemennya.
+
+   renderTokens() ngapus semua .tok terus bikin lagi. Kalau itu dipanggil
+   pas pointerdown — yang kejadian tiap kali narik token yang belum
+   kepilih — elemen yang baru aja dikasih pointer capture ikut keapus,
+   capture-nya ilang, dan seretannya putus. Hal yang sama bikin kotak
+   seleksi kedip-kedip, soalnya tiap gerakan ngebangun ulang 10 token.
+
+   Jadi ganti kelas sama gagangnya aja di tempat. */
+function syncSelDom(){
+  const w=$("boardWrap"), one=selToks.size===1;
+  [...w.querySelectorAll(".tok")].forEach(el=>{
+    const i=+el.dataset.i, on=selToks.has(i);
+    el.classList.toggle("sel",on);
+    const g=el.querySelector(".tokgrip");
+    if(on&&one&&!g){
+      const n=document.createElement("span"); n.className="tokgrip"; n.dataset.i=i;
+      n.title="Tarik buat ngatur ukuran"; el.appendChild(n);
+    }else if(g&&!(on&&one)) g.remove();
+  });
+  renderTokSize();
+}
+function setSel(list){
+  selToks.clear(); arr(list).forEach(i=>selToks.add(i));
+  syncSelDom();
+}
+function toggleSel(i){
+  if(selToks.has(i)) selToks.delete(i); else selToks.add(i);
+  syncSelDom();
+}
+function delSel(){
+  const sel=selList(); if(!sel.length) return;
+  const names=sel.map(i=>(byId.get(curBoard.tokens[i].id)||{name:"Token"}).name);
+  /* dihapus dari belakang biar indeks yang belum kehapus nggak geser */
+  sel.slice().reverse().forEach(i=>curBoard.tokens.splice(i,1));
+  selToks.clear(); renderTokens(); saveBoard();
+  toast(sel.length===1?names[0]+" diangkat dari papan."
+                      :sel.length+" hero diangkat dari papan.");
 }
 /* the frame takes the map's own aspect ratio, so nothing is cropped
    and board coordinates land exactly where they do on the map */
@@ -2800,6 +2890,7 @@ function hitStroke(p){
 }
 function boardDown(e){
   if(!curBoard||e.button===2) return;
+  if(penMode==="select") return;      /* kotak seleksi yang ngurus, bukan pena */
   const p=relPos(e);
   if(penMode==="erase"){
     const i=hitStroke(p);
@@ -2823,7 +2914,7 @@ function boardUp(){ if(!drawing) return; drawing=false; cur=null; saveBoard(); }
    Satu pointerdown bisa jadi tiga hal: narik gagang = ubah ukuran, geser
    token = pindah, lepas tanpa geser = pilih. Yang ketiga ini yang bikin
    gagang ukurannya muncul, jadi klik biasa nggak kehilangan fungsi lamanya. */
-let dragTok=null, sizeTok=null;
+let dragTok=null, sizeTok=null, marq=null;
 $("boardWrap").addEventListener("pointerdown",e=>{
   if(e.button===2) return;
   const g=e.target.closest(".tokgrip");
@@ -2835,9 +2926,30 @@ $("boardWrap").addEventListener("pointerdown",e=>{
     g.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation();
     return;
   }
-  const t=e.target.closest(".tok"); if(!t) return;
-  dragTok={el:t,i:+t.dataset.i,moved:false,x0:e.clientX,y0:e.clientY};
-  t.setPointerCapture(e.pointerId); e.preventDefault();
+  const t=e.target.closest(".tok");
+  if(t){
+    const i=+t.dataset.i;
+    if(e.shiftKey){ toggleSel(i); e.preventDefault(); return; }
+    /* narik token yang udah ikut kepilih = narik satu kelompok; narik yang
+       di luar pilihan = pilihan lama dilepas, cuma dia yang kebawa */
+    if(!selToks.has(i)) setSel([i]);
+    const sel=selList();
+    dragTok={i,moved:false,x0:e.clientX,y0:e.clientY,
+      start:sel.map(j=>({j,x:curBoard.tokens[j].x,y:curBoard.tokens[j].y})),
+      p0:relPos(e)};
+    t.setPointerCapture(e.pointerId); e.preventDefault();
+    return;
+  }
+  /* latar kosong: mode Pilih bikin kotak seleksi, mode lain biar digambar */
+  if(penMode==="select"){
+    const p=relPos(e);
+    marq={x0:p[0],y0:p[1],x1:p[0],y1:p[1],add:e.shiftKey,
+      base:e.shiftKey?selList():[]};
+    const box=document.createElement("div"); box.className="marq"; box.id="marqBox";
+    $("boardWrap").appendChild(box);
+    $("boardWrap").setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
 });
 $("boardWrap").addEventListener("pointermove",e=>{
   if(sizeTok){
@@ -2845,25 +2957,62 @@ $("boardWrap").addEventListener("pointermove",e=>{
     setTokK(sizeTok.i,sizeTok.k0*(d/sizeTok.d0),false);
     return;
   }
+  if(marq){
+    const p=relPos(e); marq.x1=p[0]; marq.y1=p[1];
+    const b=$("marqBox"); if(b){
+      b.style.left=(Math.min(marq.x0,marq.x1)*100)+"%";
+      b.style.top=(Math.min(marq.y0,marq.y1)*100)+"%";
+      b.style.width=(Math.abs(marq.x1-marq.x0)*100)+"%";
+      b.style.height=(Math.abs(marq.y1-marq.y0)*100)+"%";
+    }
+    setSel(marqHits());
+    return;
+  }
   if(!dragTok) return;
   if(!dragTok.moved){
     if(Math.abs(e.clientX-dragTok.x0)+Math.abs(e.clientY-dragTok.y0)<5) return;
-    dragTok.moved=true; dragTok.el.classList.add("drag");
+    dragTok.moved=true;
+    dragTok.start.forEach(s=>{
+      const el=$("boardWrap").querySelector('.tok[data-i="'+s.j+'"]');
+      if(el) el.classList.add("drag");
+    });
   }
-  const p=relPos(e);
-  dragTok.el.style.left=(p[0]*100)+"%"; dragTok.el.style.top=(p[1]*100)+"%";
+  const p=relPos(e), dx=p[0]-dragTok.p0[0], dy=p[1]-dragTok.p0[1];
+  dragTok.start.forEach(s=>{
+    const el=$("boardWrap").querySelector('.tok[data-i="'+s.j+'"]'); if(!el) return;
+    el.style.left=(Math.min(1,Math.max(0,s.x+dx))*100)+"%";
+    el.style.top=(Math.min(1,Math.max(0,s.y+dy))*100)+"%";
+  });
 });
+function marqHits(){
+  if(!marq||!curBoard) return [];
+  const lo=[Math.min(marq.x0,marq.x1),Math.min(marq.y0,marq.y1)];
+  const hi=[Math.max(marq.x0,marq.x1),Math.max(marq.y0,marq.y1)];
+  const hit=curBoard.tokens.map((t,i)=>
+    (t.x>=lo[0]&&t.x<=hi[0]&&t.y>=lo[1]&&t.y<=hi[1])?i:-1).filter(i=>i>=0);
+  return marq.add?[...new Set(marq.base.concat(hit))]:hit;
+}
 $("boardWrap").addEventListener("pointerup",e=>{
   if(sizeTok){ const i=sizeTok.i; sizeTok=null; saveBoard();
     const t=curBoard&&curBoard.tokens[i];
     if(t) toast((byId.get(t.id)||{name:"Token"}).name+" — "+Math.round(tokK(t)*100)+"%");
     return; }
+  if(marq){
+    const hits=marqHits(); marq=null;
+    const b=$("marqBox"); if(b) b.remove();
+    setSel(hits);
+    if(hits.length) toast(hits.length+" hero kepilih — tarik buat gerakin bareng.");
+    return;
+  }
   if(!dragTok) return;
   const d=dragTok; dragTok=null;
-  d.el.classList.remove("drag");
-  if(!d.moved){ selectTok(d.i); return; }
-  const p=relPos(e), t=curBoard&&curBoard.tokens[d.i];
-  if(t){ t.x=p[0]; t.y=p[1]; saveBoard(); }
+  if(!d.moved){ setSel([d.i]); return; }   /* klik tanpa geser = pilih dia doang */
+  const p=relPos(e), dx=p[0]-d.p0[0], dy=p[1]-d.p0[1];
+  d.start.forEach(s=>{
+    const t=curBoard&&curBoard.tokens[s.j]; if(!t) return;
+    t.x=Math.min(1,Math.max(0,s.x+dx)); t.y=Math.min(1,Math.max(0,s.y+dy));
+  });
+  renderTokens(); saveBoard();
 });
 /* scroll di atas token = ubah ukuran. Non-passive supaya halamannya
    nggak ikut kegulung waktu lagi ngatur ukuran. */
@@ -2871,23 +3020,22 @@ $("boardWrap").addEventListener("wheel",e=>{
   const el=e.target.closest(".tok"); if(!el) return;
   e.preventDefault();
   const i=+el.dataset.i, t=curBoard&&curBoard.tokens[i]; if(!t) return;
-  if(selTok!==i){ selTok=i; renderTokens(); }
-  setTokK(i,tokK(t)+(e.deltaY<0?TOK_STEP:-TOK_STEP));
+  /* scroll di atas salah satu yang kepilih = sekelompok ikut berubah */
+  if(selToks.has(i)) bumpTok(e.deltaY<0?TOK_STEP:-TOK_STEP);
+  else { setSel([i]); setTokK(i,tokK(t)+(e.deltaY<0?TOK_STEP:-TOK_STEP)); }
 },{passive:false});
-/* klik di luar token = lepas pilihan */
+/* klik di latar kosong = lepas pilihan (kecuali lagi nambah pakai shift) */
 $("boardWrap").addEventListener("pointerdown",e=>{
-  if(selTok!=null&&!e.target.closest(".tok")){ selTok=null; renderTokens(); }
+  if(selToks.size&&!e.target.closest(".tok")&&!e.shiftKey){ setSel([]); }
 });
 $("boardWrap").addEventListener("contextmenu",e=>{
   const t=e.target.closest(".tok"); if(!t) return;
   e.preventDefault();
   const i=+t.dataset.i;
-  if(curBoard&&curBoard.tokens[i]){
-    const nm=(byId.get(curBoard.tokens[i].id)||{name:"Token"}).name;
-    curBoard.tokens.splice(i,1);
-    if(selTok===i) selTok=null; else if(selTok!=null&&selTok>i) selTok--;
-    renderTokens(); saveBoard(); toast(nm+" diangkat dari papan.");
-  }
+  if(!curBoard||!curBoard.tokens[i]) return;
+  /* klik kanan di salah satu yang kepilih ngangkat semuanya sekalian */
+  if(selToks.has(i)&&selToks.size>1){ delSel(); return; }
+  setSel([i]); delSel();
 });
 function addToken(id){
   if(!curBoard){ toast("Bikin papan dulu."); return; }
@@ -5181,8 +5329,8 @@ $("tabTeam").onclick=()=>setView("team");
    jadi ganti role bukan nyaring daftar yang sama — tiap role emang punya
    urutan sendiri. Hero yang udah ketaro ilang dari kolam di kanan biar
    nggak kepasang dua kali.                                               */
-const TIER_DEF=[["s","S","#e0484d"],["a","A","#e0893f"],["b","B","#d9c441"],
-                ["c","C","#67b85c"],["d","D","#4d8fd6"]];
+const TIER_DEF=[["ss","SS","#e8558c"],["s","S","#e0484d"],["a","A","#e0893f"],
+                ["b","B","#d9c441"],["c","C","#67b85c"],["d","D","#4d8fd6"]];
 const TIER_ROLES=[["all","Semua"],...LANES.map(l=>[l,LN[l]])];
 let tierRole="all", tierQuery="", tierPick=null, tierPoolBuilt=false;
 const tierBook={};                    /* role -> {s:[],a:[],b:[],c:[],d:[]} */
@@ -5312,17 +5460,48 @@ function tierRowAt(x,y){
   const el=document.elementFromPoint(x,y);
   return el?el.closest(".tdrop"):null;
 }
-function tierIndexAt(drop,x){
-  const kids=[...drop.querySelectorAll(".hc")];
+/* Di mana hero yang lagi diseret bakal mendarat.
+
+   Dua hal yang dulu bikin "A-2 pindah ke A-4" gagal:
+
+   1. Kartu yang lagi diseret masih kehitung waktu nyari posisi. Padahal
+      tierPut ngeluarin dia dari daftar DULU baru nyelipin — jadi indeksnya
+      meleset satu, dan kartunya balik ke tempat semula kayak nolak.
+   2. Posisinya cuma dihitung dari X. Begitu satu baris isinya udah lebih
+      dari satu larik, kartu di larik bawah dibandingin sama kartu di larik
+      atas, dan hasilnya ngawur.
+
+   Sekarang kartu yang diseret dikecualiin, dan urutannya dibaca kayak baca
+   tulisan: turun dulu ke lariknya, baru kiri-kanan. */
+function tierInsertIndex(drop,x,y,skipEl){
+  const kids=[...drop.querySelectorAll(".hc")].filter(e=>e!==skipEl);
   for(let i=0;i<kids.length;i++){
     const r=kids[i].getBoundingClientRect();
-    if(x<r.left+r.width/2) return i;
+    if(y<r.top) return i;                              /* masih di atas larik ini */
+    if(y<=r.bottom&&x<r.left+r.width/2) return i;      /* se-larik, di kiri tengahnya */
   }
   return kids.length;
 }
-function tierDragStart(e,id,from){
+/* Penanda yang kelihatan: tanpa ini lo cuma bisa nebak hasilnya di mana. */
+let tmark=null;
+function clearMarker(){ if(tmark&&tmark.parentNode) tmark.remove(); }
+function placeMarker(drop,x,y){
+  if(!tmark){ tmark=document.createElement("span"); tmark.className="tmark"; }
+  const kids=[...drop.querySelectorAll(".hc")].filter(e=>e!==(tdrag&&tdrag.src));
+  const i=tierInsertIndex(drop,x,y,tdrag&&tdrag.src);
+  const empty=drop.querySelector(".tempty"); if(empty) empty.hidden=true;
+  if(i>=kids.length) drop.appendChild(tmark);
+  else drop.insertBefore(tmark,kids[i]);
+}
+function tierDragStart(e,id,from,el){
   if(e.button!==undefined&&e.button!==0) return;
-  tdrag={id,from,x0:e.clientX,y0:e.clientY,live:false,ghost:null,src:e.currentTarget};
+  /* src harus kartunya sendiri, bukan wadahnya — dulu kepasang currentTarget
+     (kolam atau daftar baris), jadi kartu yang diseret nggak pernah
+     kekecualiin pas ngitung posisi, dan hantu-nya ngeklon seluruh kolam. */
+  tdrag={id,from,x0:e.clientX,y0:e.clientY,live:false,ghost:null,src:el};
+  /* tangkep pointernya: kalau nggak, geser cepat bikin pointer keluar dari
+     elemen dan sisa gerakannya ilang — seretan berasa "nolak" */
+  try{ el.setPointerCapture(e.pointerId); }catch(_){}
 }
 function tierDragMove(e){
   if(!tdrag) return;
@@ -5336,11 +5515,15 @@ function tierDragMove(e){
     document.body.classList.add("tdragon");
   }
   e.preventDefault();
-  tdrag.ghost.style.left=(e.clientX-32)+"px";
-  tdrag.ghost.style.top=(e.clientY-32)+"px";
+  /* hantu-nya position:fixed di dalam body yang kezoom, jadi px-nya ikut
+     mengecil — clientX harus dibagi skalanya dulu biar nempel di kursor */
+  const z=uiScale();
+  tdrag.ghost.style.left=(e.clientX/z-32)+"px";
+  tdrag.ghost.style.top=(e.clientY/z-32)+"px";
   const drop=tierRowAt(e.clientX,e.clientY);
   document.querySelectorAll(".tdrop.over").forEach(d=>d.classList.remove("over"));
-  if(drop) drop.classList.add("over");
+  if(drop){ drop.classList.add("over"); placeMarker(drop,e.clientX,e.clientY); }
+  else clearMarker();
 }
 function tierDragEnd(e){
   if(!tdrag) return;
@@ -5355,8 +5538,10 @@ function tierDragEnd(e){
     return;
   }
   const drop=tierRowAt(e.clientX,e.clientY);
-  if(drop) tierPut(d.id,drop.dataset.k,tierIndexAt(drop,e.clientX));
-  else if(d.from!=="pool"&&!(e.target&&e.target.closest&&e.target.closest(".tdrop"))) tierToPool(d.id);
+  const at=drop?tierInsertIndex(drop,e.clientX,e.clientY,d.src):-1;
+  clearMarker();
+  if(drop) tierPut(d.id,drop.dataset.k,at);
+  else if(d.from!=="pool") tierToPool(d.id);   /* dilepas di luar baris = balik ke kolam */
   else renderTier();
 }
 document.addEventListener("pointermove",tierDragMove,{passive:false});
@@ -5365,11 +5550,11 @@ document.addEventListener("pointercancel",e=>{ if(tdrag) tierDragEnd(e); });
 
 $("tierPool").addEventListener("pointerdown",e=>{
   const b=e.target.closest(".hc"); if(!b||b.hidden) return;
-  tierDragStart(e,b.dataset.id,"pool");
+  tierDragStart(e,b.dataset.id,"pool",b);
 });
 $("tierRows").addEventListener("pointerdown",e=>{
   const b=e.target.closest(".hc");
-  if(b){ tierDragStart(e,b.dataset.id,"tier"); return; }
+  if(b){ tierDragStart(e,b.dataset.id,"tier",b); return; }
   const drop=e.target.closest(".tdrop");
   if(drop&&tierPick){ const id=tierPick; tierPick=null; tierPut(id,drop.dataset.k,null); }
 });
@@ -5511,46 +5696,53 @@ $("tierShot").onclick=async()=>{
 ["#ff4d4d","#4d9bff","#ffd24d","#4ddb8a","#ffffff","#15181a"].forEach((c,i)=>{
   const b=document.createElement("button"); b.type="button"; b.className="sw"; b.dataset.v=c;
   b.style.background=c; b.setAttribute("aria-pressed",String(i===0)); b.title="Warna";
-  b.onclick=()=>{ penColor=c; penMode="pen";
-    [...$("swatches").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===c)));
-    $("toolErase").classList.remove("on"); boardCanvas().className="boardcv pen"; };
+  b.onclick=()=>{ penColor=c; setPenMode("pen");
+    [...$("swatches").children].forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===c))); };
   $("swatches").appendChild(b);
 });
 $("widths").onclick=e=>{ const b=e.target.closest("button"); if(!b) return;
   penWidth=+b.dataset.v;
   [...$("widths").children].forEach(x=>x.setAttribute("aria-pressed",String(x===b))); };
-$("toolErase").onclick=()=>{
-  penMode = penMode==="erase" ? "pen" : "erase";
-  $("toolErase").classList.toggle("on",penMode==="erase");
-  boardCanvas().className="boardcv "+(penMode==="erase"?"erase":"pen");
-};
+$("toolErase").onclick=()=>setPenMode(penMode==="erase"?"pen":"erase");
 $("boardUndo").onclick=()=>{ if(!curBoard||!curBoard.strokes.length) return;
   curBoard.strokes.pop(); drawStrokes(); saveBoard(true); };
 $("boardClear").onclick=()=>{ if(!curBoard) return;
-  curBoard.strokes=[]; curBoard.tokens=[]; selTok=null;
+  curBoard.strokes=[]; curBoard.tokens=[]; selToks.clear();
   drawStrokes(); renderTokens(); saveBoard(true); toast("Papan dibersihin."); };
+
+/* ---- alat Pilih ---- */
+function setPenMode(m){
+  penMode=m;
+  $("toolErase").classList.toggle("on",m==="erase");
+  $("toolSelect").classList.toggle("on",m==="select");
+  boardCanvas().className="boardcv "+(m==="erase"?"erase":m==="select"?"sel":"pen");
+  if(m!=="select") setSel([]);
+}
+$("toolSelect").onclick=()=>setPenMode(penMode==="select"?"pen":"select");
 
 /* ---- ukuran token ---- */
 $("tokSmaller").onclick=()=>bumpTok(-TOK_STEP);
 $("tokBigger").onclick=()=>bumpTok(TOK_STEP);
-$("tokReset").onclick=()=>{ if(selTok!=null) setTokK(selTok,1); };
+$("tokReset").onclick=()=>{ const s=selList(); if(!s.length) return;
+  s.forEach(i=>setTokK(i,1,false)); renderTokSize(); saveBoard(); };
 /* keyboard: cepet waktu lagi nyusun formasi, dan nggak ganggu waktu lagi
    ngetik di kolom mana pun */
 document.addEventListener("keydown",e=>{
-  if(view!=="board"||selTok==null) return;
+  if(view!=="board") return;
   const el=document.activeElement;
   if(el&&/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+  if((e.ctrlKey||e.metaKey)&&e.key==="a"){
+    e.preventDefault();
+    if(curBoard){ setSel(curBoard.tokens.map((_,i)=>i)); setPenMode("select");
+      toast(curBoard.tokens.length+" hero kepilih."); }
+    return;
+  }
+  if(!selToks.size) return;
   if(e.key==="+"||e.key==="="){ e.preventDefault(); bumpTok(TOK_STEP); }
   else if(e.key==="-"||e.key==="_"){ e.preventDefault(); bumpTok(-TOK_STEP); }
-  else if(e.key==="0"){ e.preventDefault(); setTokK(selTok,1); }
-  else if(e.key==="Escape"){ selTok=null; renderTokens(); }
-  else if(e.key==="Delete"||e.key==="Backspace"){
-    e.preventDefault();
-    const t=curBoard&&curBoard.tokens[selTok]; if(!t) return;
-    const nm=(byId.get(t.id)||{name:"Token"}).name;
-    curBoard.tokens.splice(selTok,1); selTok=null;
-    renderTokens(); saveBoard(); toast(nm+" diangkat dari papan.");
-  }
+  else if(e.key==="0"){ e.preventDefault(); $("tokReset").onclick(); }
+  else if(e.key==="Escape"){ setSel([]); }
+  else if(e.key==="Delete"||e.key==="Backspace"){ e.preventDefault(); delSel(); }
 });
 $("boardNew").onclick=()=>{ const b=freshBoard(); boards.push(b); curBoard=b; saveBoard(true); renderWhiteboard(); toast(b.name+" dibikin."); };
 $("boardRename").onclick=()=>{ if(!curBoard) return;
@@ -5634,6 +5826,30 @@ function syncThemeLabel(){
   $("btnTheme").textContent=dark?"Mode terang":"Mode gelap";
   return dark;
 }
+/* ---- ukuran tampilan ----
+   Default 67% karena itu yang kepakai sehari-hari; angkanya disimpen biar
+   nggak perlu diatur ulang tiap buka. Kalau browsernya sendiri masih
+   dizoom, dua-duanya ketumpuk — makanya zoom browser balikin ke 100%. */
+const UI_STEPS=[50,58,67,75,85,100,115];
+let uiIdx=UI_STEPS.indexOf(67);
+function uiScale(){ return UI_STEPS[uiIdx]/100; }
+function applyUi(save){
+  document.documentElement.style.setProperty("--ui",String(uiScale()));
+  $("uiVal").textContent=UI_STEPS[uiIdx]+"%";
+  $("uiDown").disabled=uiIdx<=0;
+  $("uiUp").disabled=uiIdx>=UI_STEPS.length-1;
+  if(save!==false){ try{ localStorage.setItem("hokdraft.ui",String(UI_STEPS[uiIdx])); }catch(e){} }
+  if(view==="board") fitCanvas();
+}
+$("uiDown").onclick=()=>{ if(uiIdx>0){ uiIdx--; applyUi(); } };
+$("uiUp").onclick=()=>{ if(uiIdx<UI_STEPS.length-1){ uiIdx++; applyUi(); } };
+try{
+  const v=parseInt(localStorage.getItem("hokdraft.ui"),10);
+  const i=UI_STEPS.indexOf(v);
+  if(i>=0) uiIdx=i;
+}catch(e){}
+applyUi(false);
+
 $("btnTheme").onclick=()=>{
   const dark=syncThemeLabel();
   document.documentElement.setAttribute("data-theme",dark?"light":"dark");
