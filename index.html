@@ -659,8 +659,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radiu
   background:var(--sunk);box-shadow:var(--lift-sm);touch-action:none;user-select:none}
 .boardbg{position:absolute;inset:0;pointer-events:none}
 .boardbg img{width:100%;height:100%;object-fit:fill;display:block}
-.boardwrap:fullscreen{max-width:none;max-height:100vh;height:100vh;width:auto;border-radius:0}
-.boardwrap:fullscreen .boardbg img{object-fit:contain}
 .bhint{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;gap:7px;
   align-items:center;justify-content:center;pointer-events:none;text-align:center;padding:20px}
 .bhint b{font-size:16px;font-weight:800;color:#e9eae2}
@@ -1070,6 +1068,33 @@ body.tdragon{cursor:grabbing;user-select:none}
 .blabel.sel{outline:2px dashed var(--ink);outline-offset:3px;z-index:10}
 .blabel.drag{cursor:grabbing;opacity:.85}
 
+/* ---- layar penuh yang masih bisa dipakai kerja ----
+   Yang di-fullscreen cuma #boardWrap, jadi alat-alatnya dipindah ke dalam
+   dia pas masuk. Di sini cuma urusan posisi: logikanya ada di fsEnter(). */
+.boardstage:fullscreen .fsui{position:absolute;z-index:40;background:var(--panel);
+  box-shadow:0 8px 26px rgba(0,0,0,.5);border-radius:16px}
+.boardstage:fullscreen #bTools{top:12px;left:12px;right:12px;margin:0;padding:9px 12px;
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.boardstage:fullscreen #stepRow{bottom:12px;left:12px;margin:0;padding:8px 14px;
+  display:flex;gap:8px;align-items:center;max-width:calc(100% - 24px)}
+.boardstage:fullscreen #stepRow .sp{display:none}
+/* galeri hero jadi laci yang nutup gambar cuma pas dibuka */
+/* vw/vh nggak ikut kezoom, jadi angka mentah di sini kebaca cuma 67%-nya.
+   Dibagi --ui dulu biar lebarnya sesuai yang kelihatan. */
+.boardstage:fullscreen #bHeroCard.fsdrawer{top:72px;right:14px;bottom:14px;
+  width:calc(440px / var(--ui,0.67));max-width:calc(46vw / var(--ui,0.67));
+  display:flex;flex-direction:column;overflow:hidden;padding:14px}
+.boardstage:fullscreen #bHeroCard.fsdrawer .grid{max-height:none}
+body.fsboard .pane.right{min-height:0}
+.pill.fsonly{display:none}
+body.fsboard .pill.fsonly{display:inline-flex}
+
+.boardstage{position:relative}
+.boardstage:fullscreen{display:flex;align-items:center;justify-content:center;
+  background:#07090a;overflow:hidden}
+.boardstage:fullscreen .boardwrap{max-width:none;max-height:none;aspect-ratio:auto;
+  border-radius:10px;margin:0}
+
 </style>
 </head>
 <body>
@@ -1473,7 +1498,7 @@ body.tdragon{cursor:grabbing;user-select:none}
           <span class="sp" style="flex:1"></span>
           <span class="saved" id="savedBoard">Tersimpan otomatis</span>
         </div>
-        <div class="btools">
+        <div class="btools" id="bTools">
           <div class="swatches" id="swatches"></div>
           <div class="widths" id="widths">
             <button type="button" data-v="3" aria-pressed="true"><i style="width:14px;height:3px"></i></button>
@@ -1505,19 +1530,22 @@ body.tdragon{cursor:grabbing;user-select:none}
             <button type="button" class="tsr" id="tokReset" title="Balikin ke ukuran asal">Reset</button>
           </div>
           <span class="sp" style="flex:1"></span>
+          <button class="pill fsonly" id="fsHero" hidden>Hero</button>
           <button class="pill" id="boardBg">Ganti map</button>
           <button class="pill" id="boardFull">Layar penuh</button>
           <button class="pill" id="boardPng">Simpan PNG</button>
         </div>
-        <div class="boardwrap" id="boardWrap">
-          <div class="boardbg" id="boardBgEl"></div>
-          <div class="bhint" id="boardHint" hidden>
-            <b>Belum ada map</b>
-            <span>Tekan <b>Ganti map</b> di atas buat upload screenshot map lo.</span>
+        <div class="boardstage" id="boardStage">
+          <div class="boardwrap" id="boardWrap">
+            <div class="boardbg" id="boardBgEl"></div>
+            <div class="bhint" id="boardHint" hidden>
+              <b>Belum ada map</b>
+              <span>Tekan <b>Ganti map</b> di atas buat upload screenshot map lo.</span>
+            </div>
+            <canvas class="boardcv pen" id="boardCv"></canvas>
           </div>
-          <canvas class="boardcv pen" id="boardCv"></canvas>
         </div>
-        <div class="steprow">
+        <div class="steprow" id="stepRow">
           <span class="steplbl">Langkah</span>
           <div class="stepbar" id="stepBar"></div>
           <button class="pill sm" id="stepDup">Duplikat</button>
@@ -1528,8 +1556,8 @@ body.tdragon{cursor:grabbing;user-select:none}
         <p class="boardnote">Tarik token buat mindahin. Klik kanan buat angkat. Panah ← → buat pindah langkah.</p>
       </section>
     </div>
-    <div class="pane right">
-      <section class="card flex">
+    <div class="pane right" id="boardRight">
+      <section class="card flex" id="bHeroCard">
         <div class="galbar">
           <div class="search"><input type="search" id="bq" placeholder="Cari hero…" autocomplete="off"></div>
           <div class="tsides" id="tokSide">
@@ -2004,7 +2032,7 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="aafcdfc9";   /* diisi pas build */
+const APP_VER="38aa0ec2";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
@@ -3265,6 +3293,9 @@ function keyOfEl(el){ return pKey(el.dataset.kind||"t",+el.dataset.i); }
 
 $("boardWrap").addEventListener("pointerdown",e=>{
   if(e.button===2) return;
+  /* pas layar penuh, toolbar ada DI DALAM papan — kliknya nggak boleh
+     dianggap nggambar atau ngelepas pilihan */
+  if(e.target.closest(".fsui")) return;
   /* Mode Panah dicek paling awal: token itu elemen DOM di atas canvas, jadi
      kalau ini ditaruh di handler canvas, narik panah DARI hero nggak pernah
      kebaca — yang kejadian malah tokennya keseret. */
@@ -3389,6 +3420,7 @@ $("boardWrap").addEventListener("pointerup",e=>{
   renderTokens(); renderLabels(); drawStrokes(); saveBoard();
 });
 $("boardWrap").addEventListener("wheel",e=>{
+  if(e.target.closest(".fsui")) return;
   const el=e.target.closest(PIECE_SEL); if(!el) return;
   e.preventDefault();
   const key=keyOfEl(el); if(!piece(key)) return;
@@ -3398,10 +3430,11 @@ $("boardWrap").addEventListener("wheel",e=>{
 },{passive:false});
 /* klik di latar kosong = lepas pilihan (kecuali lagi nambah pakai shift) */
 $("boardWrap").addEventListener("pointerdown",e=>{
-  if(penMode==="arrow") return;
+  if(penMode==="arrow"||e.target.closest(".fsui")) return;
   if(selToks.size&&!e.target.closest(PIECE_SEL)&&!e.shiftKey) setSel([]);
 });
 $("boardWrap").addEventListener("contextmenu",e=>{
+  if(e.target.closest(".fsui")) return;
   const el=e.target.closest(PIECE_SEL); if(!el) return;
   e.preventDefault();
   const key=keyOfEl(el); if(!piece(key)) return;
@@ -6234,19 +6267,86 @@ $("boardDel").onclick=()=>{ if(!curBoard) return;
   curBoard=boards[0]||null; lsSave(); renderWhiteboard(); toast(gone.name+" dihapus."); };
 $("boardSel").onchange=e=>setBoard(e.target.value);
 $("boardBg").onclick=()=>{ if(curBoard) $("fileBg").click(); };
+/* ──────────────────────────────────────────────────────────────
+   Layar penuh yang masih bisa dipakai kerja.
+
+   Yang di-fullscreen itu #boardWrap doang, jadi semua alat di luarnya
+   ilang — papannya jadi gede tapi berubah cuma bisa dilihat, nggak bisa
+   diapa-apain. Padahal di ukuran default gambarnya kekecilan: dua-duanya
+   setengah kepakai.
+
+   Jadi pas masuk fullscreen, toolbar, baris langkah, dan galeri heronya
+   DIPINDAH ke dalam #boardWrap jadi lapisan ngambang, terus dibalikin ke
+   tempat semula pas keluar. Elemennya dipindah, bukan diduplikat — jadi
+   nggak ada id dobel dan semua handler-nya kebawa apa adanya. */
+const fsHome=new Map();
+function fsPark(id){
+  const el=$(id); if(!el||fsHome.has(id)) return;
+  fsHome.set(id,{parent:el.parentNode,next:el.nextSibling});
+  el.classList.add("fsui");
+  $("boardStage").appendChild(el);
+}
+function fsRestore(id){
+  const el=$(id), h=fsHome.get(id); if(!el||!h) return;
+  el.classList.remove("fsui");
+  h.parent.insertBefore(el,h.next);
+  fsHome.delete(id);
+}
+function fsEnter(){
+  ["bTools","stepRow","bHeroCard"].forEach(fsPark);
+  $("bHeroCard").classList.add("fsdrawer");
+  $("bHeroCard").hidden=true;
+  $("fsHero").hidden=false;
+  $("fsHero").classList.remove("on");
+  document.body.classList.add("fsboard");
+}
+function fsLeave(){
+  $("bHeroCard").classList.remove("fsdrawer");
+  $("bHeroCard").hidden=false;
+  ["bTools","stepRow","bHeroCard"].forEach(fsRestore);
+  $("fsHero").hidden=true;
+  document.body.classList.remove("fsboard");
+}
+$("fsHero").onclick=()=>{
+  const d=$("bHeroCard");
+  d.hidden=!d.hidden;
+  $("fsHero").classList.toggle("on",!d.hidden);
+  if(!d.hidden) renderBGrid();
+};
 $("boardFull").onclick=async()=>{
-  const w=$("boardWrap");
+  /* yang di-fullscreen panggungnya, bukan papannya: Chrome maksa elemen
+     fullscreen ngisi layar penuh, jadi kalau papannya sendiri yang
+     di-fullscreen rasionya dipaksa jadi rasio layar dan mapnya ketarik */
+  const w=$("boardStage");
   try{
     if(document.fullscreenElement){ await document.exitFullscreen(); }
     else if(w.requestFullscreen){ await w.requestFullscreen(); }
     else { toast("Layar penuh nggak didukung di tampilan ini."); return; }
-    setTimeout(fitCanvas,120);
   }catch(e){ toast("Layar penuh ditolak browser."); }
 };
 document.addEventListener("fullscreenchange",()=>{
-  $("boardFull").textContent=document.fullscreenElement?"Keluar layar penuh":"Layar penuh";
-  setTimeout(fitCanvas,120);
+  const on=!!document.fullscreenElement;
+  if(on) fsEnter(); else fsLeave();
+  $("boardFull").textContent=on?"Keluar layar penuh":"Layar penuh";
+  setTimeout(()=>{ fitStage(); fitCanvas(); renderBoardAll(); },120);
 });
+/* Ukuran papan di layar penuh dihitung di JS, bukan CSS: aspect-ratio plus
+   max-width/max-height saling tabrak begitu dua-duanya kena batas, dan yang
+   kalah selalu rasionya. Di sini rasionya yang dipegang, sisanya ngikut. */
+function fitStage(){
+  const w=$("boardWrap"), st=$("boardStage");
+  if(!document.fullscreenElement){ w.style.width=""; w.style.height=""; return; }
+  const r=st.getBoundingClientRect();
+  const z=uiScale()||1;
+  const ar=(curBoard&&curBoard.ar)||1.55;
+  const padX=20, padTop=78, padBot=70;           /* ruang toolbar & baris langkah */
+  let W=Math.max(80,r.width-padX*2), H=Math.max(60,r.height-padTop-padBot);
+  if(W/H>ar) W=H*ar; else H=W/ar;
+  /* r.* itu px visual; style.width dibaca sebagai px DI DALAM konteks yang
+     kezoom, jadi harus dibagi skalanya dulu */
+  w.style.width=(W/z)+"px"; w.style.height=(H/z)+"px";
+}
+window.addEventListener("resize",()=>{ if(document.fullscreenElement){ fitStage(); fitCanvas(); } });
 $("boardPng").onclick=boardToPng;
 $("bq").oninput=e=>{ bQuery=e.target.value; renderBGrid(); };
 $("bGrid").onclick=e=>{ const b=e.target.closest(".hc"); if(b) addToken(b.dataset.id); };
