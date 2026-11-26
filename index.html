@@ -1030,6 +1030,32 @@ body.tdragon{cursor:grabbing;user-select:none}
   background:rgba(125,125,125,.14);border-radius:4px}
 .pill.on{background:var(--ink);color:var(--panel)}
 
+/* ---- langkah, panah, tulisan ---- */
+.steprow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:11px}
+.steplbl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;
+  color:var(--ink-dim)}
+.stepbar{display:flex;gap:4px;flex-wrap:wrap;background:var(--track);border-radius:999px;padding:3px}
+.stepn{width:28px;height:26px;border-radius:999px;font-size:12px;font-weight:800;
+  color:var(--ink-mid);background:transparent;line-height:1}
+.stepn:hover{color:var(--ink);background:var(--panel)}
+.stepn[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.stepn.add{color:var(--ink-dim);font-size:15px}
+.stepinfo{font-size:11.5px;font-weight:700;color:var(--ink-dim);font-variant-numeric:tabular-nums}
+.boardcv.arrow{cursor:crosshair}
+.alignbar{display:inline-flex;gap:2px;background:var(--track);border-radius:999px;padding:3px}
+.alignbar button{width:26px;height:26px;border-radius:50%;font-size:13px;color:var(--ink-mid);
+  background:transparent;line-height:1}
+.alignbar button:hover{background:var(--panel);color:var(--ink)}
+/* tulisan di papan: diperlakukan sama kayak token — bisa dipilih, digeser,
+   diubah ukurannya, dan ikut kebawa pas ekspor PNG */
+.blabel{position:absolute;transform:translate(-50%,-50%);z-index:7;cursor:grab;
+  font-size:calc(15px * var(--k,1));font-weight:800;color:#fff;white-space:nowrap;
+  padding:calc(3px * var(--k,1)) calc(8px * var(--k,1));border-radius:calc(7px * var(--k,1));
+  background:rgba(0,0,0,.55);text-shadow:0 1px 3px rgba(0,0,0,.8);
+  touch-action:none;user-select:none}
+.blabel.sel{outline:2px dashed var(--ink);outline-offset:3px;z-index:10}
+.blabel.drag{cursor:grabbing;opacity:.85}
+
 </style>
 </head>
 <body>
@@ -1441,9 +1467,22 @@ body.tdragon{cursor:grabbing;user-select:none}
             <button type="button" data-v="11" aria-pressed="false"><i style="width:14px;height:10px"></i></button>
           </div>
           <button class="pill" id="toolSelect">Pilih</button>
+          <button class="pill" id="toolArrow">Panah</button>
+          <button class="pill" id="boardText">+ Tulisan</button>
           <button class="pill" id="toolErase">Hapus coretan</button>
           <button class="pill" id="boardUndo">Undo</button>
+          <button class="pill" id="boardRedo">Redo</button>
           <button class="pill" id="boardClear">Bersihin</button>
+          <div class="alignbar" id="boardAlign" hidden>
+            <button type="button" data-a="l" title="Rata kiri">⇤</button>
+            <button type="button" data-a="cx" title="Rata tengah mendatar">⇹</button>
+            <button type="button" data-a="r" title="Rata kanan">⇥</button>
+            <button type="button" data-a="t" title="Rata atas">⇞</button>
+            <button type="button" data-a="cy" title="Rata tengah tegak">⇕</button>
+            <button type="button" data-a="b" title="Rata bawah">⇟</button>
+            <button type="button" data-a="dx" title="Bagi rata jarak mendatar">↔</button>
+            <button type="button" data-a="dy" title="Bagi rata jarak tegak">↕</button>
+          </div>
           <div class="toksize" id="tokSize" hidden>
             <span class="tsn" id="tokSizeName">Hero</span>
             <button type="button" id="tokSmaller" title="Kecilin (tombol −)">−</button>
@@ -1464,7 +1503,15 @@ body.tdragon{cursor:grabbing;user-select:none}
           </div>
           <canvas class="boardcv pen" id="boardCv"></canvas>
         </div>
-        <p class="boardnote">Tarik token buat mindahin. Klik kanan token buat angkat.</p>
+        <div class="steprow">
+          <span class="steplbl">Langkah</span>
+          <div class="stepbar" id="stepBar"></div>
+          <button class="pill sm" id="stepDup">Duplikat</button>
+          <button class="pill sm" id="stepDel">Hapus langkah</button>
+          <span class="sp" style="flex:1"></span>
+          <span class="stepinfo" id="stepInfo"></span>
+        </div>
+        <p class="boardnote">Tarik token buat mindahin. Klik kanan buat angkat. Panah ← → buat pindah langkah.</p>
       </section>
     </div>
     <div class="pane right">
@@ -1943,12 +1990,13 @@ function monogram(n){ return (n.replace(/[^A-Za-z]/g,"").slice(0,2)||"?").toUppe
 
 /* ---- persistence ---- */
 const LS="hokdraft.v1";
-const APP_VER="77644a4d";   /* diisi pas build */
+const APP_VER="ad0570d3";   /* diisi pas build */
 /* id ikut ditulis supaya dokumennya bisa dikenali tanpa lihat path-nya */
 function heroDoc(h){ return {id:h.id,name:h.name,lanes:h.lanes,dmg:h.dmg,img:h.img||null,prio:!!h.prio,offmeta:!!h.offmeta,
   weak:h.weak||[],combo:h.combo||[],custom:!!h.custom}; }
 function overridesOut(){ const o={}; heroes.forEach(h=>{ if(h.custom||h.edited) o[h.id]=heroDoc(h); }); return o; }
-function lsSave(){ try{ localStorage.setItem(LS,JSON.stringify({S,ov:overridesOut(),boards,teams})); }catch(e){} }
+function lsSave(){ try{ localStorage.setItem(LS,JSON.stringify(
+  {S,ov:overridesOut(),boards:boards.map(boardDoc),teams})); }catch(e){} }
 function lsLoad(){ try{ const r=localStorage.getItem(LS); return r?JSON.parse(r):null; }catch(e){ return null; } }
 function queueSave(){ dirty=true; lsSave(); clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{ store.doc("state/series").set(S).catch(()=>{}); },400); }
@@ -2640,6 +2688,7 @@ function renderMeters(){
    Strokes and tokens are stored in 0..1 coords so they survive any resize. */
 const BLANK_BG="#1d231f";
 let boards=[], curBoard=null, penColor="#ff4d4d", penWidth=3, penMode="pen", tokSide="b";
+let arrowDraft=null, arrowDash=false;
 let bQuery="", bFilter="all", bGridBuilt=false, boardSaveTimer=null;
 
 /* Tim dari versi lama: `games` kesimpen sebagai jumlah, bukan daftar draft.
@@ -2668,31 +2717,125 @@ function fixTeam(t){
   return t;
 }
 
-/* papan dari versi lama bisa nggak punya strokes/tokens sama sekali */
+/* ──────────────────────────────────────────────────────────────
+   Papan sekarang isinya LANGKAH, bukan satu kondisi.
+
+   Satu papan nyimpen deretan langkah; tiap langkah punya token, coretan,
+   panah, dan tulisannya sendiri. Buat ngajarin rotasi, itu bedanya antara
+   "ini posisinya" sama "ini posisi menit 2:00, ini 2:15, ini pas collapse".
+
+   curBoard.tokens dan kawan-kawan tetap ada sebagai penunjuk ke langkah
+   yang lagi dibuka — array-nya sama persis, bukan salinan. Jadi semua kode
+   lama yang nulis ke curBoard.tokens otomatis nulis ke langkah yang bener,
+   dan nggak ada yang perlu diubah cuma gara-gara ini.
+   ────────────────────────────────────────────────────────────── */
+let uidN=0;
+function uid(){ return "u"+Date.now().toString(36)+(uidN++).toString(36)+Math.random().toString(36).slice(2,5); }
+
+function fixStep(s){
+  s=(s&&typeof s==="object")?s:{};
+  const tokens=arr(s.tokens).filter(t=>t&&typeof t==="object"&&typeof t.id==="string");
+  tokens.forEach(t=>{
+    const k=Number(t.k);
+    t.k=(isFinite(k)&&k>0)?Math.min(3,Math.max(0.5,k)):1;
+    /* ID tetap. Nomor urut nggak bisa dipakai buat nyantolin panah: hapus
+       satu token, semua nomor di belakangnya geser, dan panahnya nunjuk
+       ke hero yang salah. */
+    if(typeof t.u!=="string"||!t.u) t.u=uid();
+  });
+  const strokes=arr(s.strokes).filter(x=>x&&typeof x==="object"&&Array.isArray(x.pts));
+  const ends=v=>v&&typeof v==="object"&&(typeof v.u==="string"||(isFinite(v.x)&&isFinite(v.y)));
+  const arrows=arr(s.arrows).filter(a=>a&&typeof a==="object"&&ends(a.from)&&ends(a.to));
+  const labels=arr(s.labels).filter(l=>l&&typeof l==="object"&&typeof l.t==="string"&&l.t.trim());
+  labels.forEach(l=>{
+    const k=Number(l.k); l.k=(isFinite(k)&&k>0)?Math.min(4,Math.max(0.5,k)):1;
+    l.x=Math.min(1,Math.max(0,Number(l.x)||0.5));
+    l.y=Math.min(1,Math.max(0,Number(l.y)||0.5));
+  });
+  return {tokens,strokes,arrows,labels};
+}
+function blankStep(){ return {tokens:[],strokes:[],arrows:[],labels:[]}; }
+/* nunjuk field kerja ke langkah yang lagi kebuka */
+function bindStep(b){
+  const s=b.steps[b.step]||blankStep();
+  b.tokens=s.tokens; b.strokes=s.strokes; b.arrows=s.arrows; b.labels=s.labels;
+}
 function fixBoard(b){
   if(!b||typeof b!=="object"||!b.id) return null;
   b.name=str(b.name,"Papan");
   b.bg=typeof b.bg==="string"&&b.bg?b.bg:null;
-  b.strokes=arr(b.strokes).filter(s=>s&&typeof s==="object"&&Array.isArray(s.pts));
-  b.tokens=arr(b.tokens).filter(t=>t&&typeof t==="object"&&typeof t.id==="string");
-  /* ukuran token: apa pun yang masuk dibikin angka yang masuk akal, dan
-     token lama yang nggak punya field ini dikasih 1 */
-  b.tokens.forEach(t=>{
-    const k=Number(t.k);
-    t.k=(isFinite(k)&&k>0)?Math.min(3,Math.max(0.5,k)):1;
-  });
+  /* papan versi lama nyimpen tokens/strokes langsung di akarnya — itu jadi
+     langkah pertama, jadi nggak ada papan lama yang kosong mendadak */
+  let steps=arr(b.steps);
+  if(!steps.length) steps=[{tokens:b.tokens,strokes:b.strokes}];
+  b.steps=steps.map(fixStep);
+  b.step=Math.min(Math.max(0,Number(b.step)||0),b.steps.length-1);
+  bindStep(b);
   b.at=Number(b.at)||0;
   return b;
 }
-function freshBoard(name){
-  return {id:"b"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-    name:name||("Papan "+(boards.length+1)),bg:null,strokes:[],tokens:[],at:Date.now()};
+/* yang disimpen cuma langkahnya — field kerja itu penunjuk ke array yang
+   sama, kalau ikut ditulis isinya kesimpen dua kali */
+function boardDoc(b){
+  return {id:b.id,name:b.name,bg:b.bg||null,ar:b.ar||null,at:b.at||0,
+          step:b.step||0,steps:b.steps};
 }
+function freshBoard(name){
+  const b={id:"b"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    name:name||("Papan "+(boards.length+1)),bg:null,at:Date.now(),
+    steps:[blankStep()],step:0};
+  bindStep(b); return b;
+}
+/* ---- undo/redo papan ----
+   Dulu Undo cuma nyopot coretan terakhir. Begitu token bisa digeser,
+   diubah ukurannya, dan dipindah sekelompok sekaligus, itu nggak cukup:
+   satu tarikan salah bisa mindahin lima token dan nggak ada jalan balik.
+
+   Caranya paling sederhana yang bener: simpen potret seluruh langkah
+   SEBELUM tiap perubahan. Potretnya kecil (token itu beberapa angka;
+   yang agak berat cuma coretan), dibatasin 40 biar nggak numpuk, dan
+   fitur baru apa pun otomatis keikut tanpa perlu ditambahin satu-satu. */
+const BUNDO_MAX=40;
+let bUndo=[], bRedo=[];
+function boardState(){ return JSON.stringify({step:curBoard.step,steps:curBoard.steps}); }
+function snapBoard(){
+  if(!curBoard) return;
+  bUndo.push(boardState());
+  if(bUndo.length>BUNDO_MAX) bUndo.shift();
+  bRedo.length=0;
+  syncUndoBtns();
+}
+function applyBoardState(json){
+  const d=JSON.parse(json);
+  curBoard.steps=arr(d.steps).map(fixStep);
+  if(!curBoard.steps.length) curBoard.steps=[blankStep()];
+  curBoard.step=Math.min(Math.max(0,d.step|0),curBoard.steps.length-1);
+  bindStep(curBoard); selToks.clear();
+  renderBoardAll(); saveBoard();
+}
+function boardUndoStep(){
+  if(!bUndo.length||!curBoard) return;
+  bRedo.push(boardState());
+  applyBoardState(bUndo.pop());
+  syncUndoBtns();
+}
+function boardRedoStep(){
+  if(!bRedo.length||!curBoard) return;
+  bUndo.push(boardState());
+  applyBoardState(bRedo.pop());
+  syncUndoBtns();
+}
+function syncUndoBtns(){
+  const u=$("boardUndo"), r=$("boardRedo");
+  if(u) u.disabled=!bUndo.length||!boards.length;
+  if(r) r.disabled=!bRedo.length||!boards.length;
+}
+
 function saveBoard(now){
   if(!curBoard) return;
   lsSave();
   clearTimeout(boardSaveTimer);
-  const go=()=>store.doc("boards/"+curBoard.id).set(curBoard).then(()=>markSaved(true)).catch(()=>markSaved(false));
+  const go=()=>store.doc("boards/"+curBoard.id).set(boardDoc(curBoard)).then(()=>markSaved(true)).catch(()=>markSaved(false));
   if(now) go(); else boardSaveTimer=setTimeout(go,500);
 }
 function boardCanvas(){ return $("boardCv"); }
@@ -2702,6 +2845,56 @@ function fitCanvas(){
   const dpr=Math.min(window.devicePixelRatio||1,2);
   cv.width=Math.max(1,Math.round(r.width*dpr)); cv.height=Math.max(1,Math.round(r.height*dpr));
   drawStrokes();
+}
+/* ──────────────────────────────────────────────────────────────
+   Panah gerakan.
+
+   Ujungnya nyantol ke token lewat ID tetapnya, bukan koordinat. Jadi pas
+   tokennya digeser, panahnya ikut — itu bedanya sama garis yang digambar
+   pakai pena, yang langsung salah arah begitu heronya pindah.
+
+   Ujung yang nggak nyantol ke token disimpen sebagai titik biasa, jadi
+   panah ke lokasi kosong (ward, objektif) tetap bisa.
+   ────────────────────────────────────────────────────────────── */
+function tokByU(u){
+  if(!curBoard) return null;
+  /* dibaca dari elemennya kalau lagi diseret, biar panahnya ngikut
+     sebelum posisinya kesimpen balik ke data */
+  const i=curBoard.tokens.findIndex(t=>t.u===u);
+  if(i<0) return null;
+  const el=$("boardWrap").querySelector('.tok[data-i="'+i+'"]');
+  if(el&&el.style.left&&el.style.top)
+    return [parseFloat(el.style.left)/100,parseFloat(el.style.top)/100];
+  const t=curBoard.tokens[i]; return [t.x,t.y];
+}
+function arrowEnd(e){
+  if(!e) return null;
+  if(typeof e.u==="string") return tokByU(e.u);
+  return [e.x,e.y];
+}
+function drawArrow(ctx,W,H,a,scale){
+  const A=arrowEnd(a.from), B=arrowEnd(a.to);
+  if(!A||!B) return;
+  const x1=A[0]*W, y1=A[1]*H, x2=B[0]*W, y2=B[1]*H;
+  const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy);
+  if(len<4) return;
+  const w=Math.max(1.5,(a.w||4)*scale*1.4);
+  ctx.save();
+  ctx.strokeStyle=a.c||"#ffd24d"; ctx.fillStyle=a.c||"#ffd24d";
+  ctx.lineWidth=w; ctx.lineCap="round"; ctx.lineJoin="round";
+  if(a.d) ctx.setLineDash([w*2.4,w*2]);
+  /* batang berhenti sebelum kepala, biar ujungnya nggak nebel */
+  const head=Math.min(len*0.42,w*4.2);
+  const ux=dx/len, uy=dy/len;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2-ux*head*0.9,y2-uy*head*0.9); ctx.stroke();
+  ctx.setLineDash([]);
+  const px=-uy, py=ux;
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-ux*head+px*head*0.48, y2-uy*head+py*head*0.48);
+  ctx.lineTo(x2-ux*head-px*head*0.48, y2-uy*head-py*head*0.48);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
 }
 function drawStrokes(){
   const cv=boardCanvas(); if(!cv||!curBoard) return;
@@ -2717,76 +2910,122 @@ function drawStrokes(){
     if(s.pts.length===1){ ctx.lineTo(s.pts[0][0]*W+0.1,s.pts[0][1]*H); }
     ctx.stroke();
   });
+  arr(curBoard.arrows).forEach(a=>drawArrow(ctx,W,H,a,scale));
+  if(arrowDraft) drawArrow(ctx,W,H,arrowDraft,scale);
 }
 /* Ukuran token disimpen sebagai pengali, bukan piksel: papannya ikut lebar
    layar dan diekspor ke PNG 1600px, jadi angka piksel bakal salah di salah
    satu dari dua tempat itu. Token lama nggak punya field ini — dianggep 1,
    jadi papan yang udah ada nggak berubah tampilannya. */
 const TOK_MIN=0.5, TOK_MAX=3, TOK_STEP=0.15;
-/* Pilihan disimpen sebagai kumpulan indeks, bukan satu indeks. Nyusun
-   rotasi itu kerjaan kelompok: lima hero geser bareng ke satu lane, bukan
-   satu-satu. Satu token kepilih cuma kasus khusus dari kumpulan isi satu. */
+/* ──────────────────────────────────────────────────────────────
+   Pilihan di papan.
+
+   Kuncinya string berkode jenis — "t3" token ke-3, "l0" tulisan ke-0 —
+   bukan angka. Jadi token dan tulisan bisa kepilih barengan dan digeser,
+   diubah ukurannya, atau dihapus dalam satu gerakan. Kalau kuncinya angka
+   doang, tulisan bakal jadi warga kelas dua yang harus punya jalur sendiri
+   buat tiap aksi.
+   ────────────────────────────────────────────────────────────── */
 const selToks=new Set();
 const tokK=t=>{ const k=+(t&&t.k); return k>=TOK_MIN&&k<=TOK_MAX?k:1; };
-const selList=()=>[...selToks].filter(i=>curBoard&&curBoard.tokens[i]).sort((a,b)=>a-b);
+const labK=l=>{ const k=+(l&&l.k); return k>=TOK_MIN&&k<=4?k:1; };
+const pKey=(kind,i)=>kind+i;
+const pKind=k=>k[0];
+const pIdx=k=>+k.slice(1);
+function pList(key){ return pKind(key)==="t"?(curBoard&&curBoard.tokens):(curBoard&&curBoard.labels); }
+function piece(key){ const l=pList(key); return l&&l[pIdx(key)]; }
+function pieceK(key){ const o=piece(key); return pKind(key)==="t"?tokK(o):labK(o); }
+function pieceMax(key){ return pKind(key)==="t"?TOK_MAX:4; }
+function pieceName(key){
+  const o=piece(key); if(!o) return "?";
+  return pKind(key)==="t" ? (byId.get(o.id)||{name:o.id}).name : '"'+o.t+'"';
+}
+function pieceEl(key){
+  return $("boardWrap").querySelector(
+    (pKind(key)==="t"?".tok":".blabel")+'[data-i="'+pIdx(key)+'"]');
+}
+const selList=()=>[...selToks].filter(k=>piece(k)).sort();
 
 function renderTokens(){
   const w=$("boardWrap");
   [...w.querySelectorAll(".tok")].forEach(n=>n.remove());
   if(!curBoard){ renderTokSize(); return; }
-  [...selToks].forEach(i=>{ if(!curBoard.tokens[i]) selToks.delete(i); });
+  [...selToks].forEach(k=>{ if(!piece(k)) selToks.delete(k); });
   const one=selToks.size===1;
   curBoard.tokens.forEach((t,i)=>{
     const h=byId.get(t.id);
-    const on=selToks.has(i);
+    const on=selToks.has(pKey("t",i));
     const b=document.createElement("button"); b.type="button";
-    b.className="tok "+(t.s||"n")+(on?" sel":""); b.dataset.i=i;
+    b.className="tok "+(t.s||"n")+(on?" sel":""); b.dataset.i=i; b.dataset.kind="t";
     b.style.left=(t.x*100)+"%"; b.style.top=(t.y*100)+"%";
     b.style.setProperty("--k",String(tokK(t)));
     b.title=(h?h.name:t.id)+" — tarik buat mindahin, scroll buat ukuran, "
       +"shift+klik buat nambah ke pilihan, klik kanan buat hapus";
     b.appendChild(portrait(h||{name:t.id,img:null}));
     /* gagang cuma muncul kalau yang kepilih satu: narik gagang buat sekelompok
-       token nggak jelas mau diukur dari mana — buat kelompok pakai tombol -/+ */
-    if(on&&one){
-      const g=document.createElement("span"); g.className="tokgrip"; g.dataset.i=i;
-      g.title="Tarik buat ngatur ukuran";
-      b.appendChild(g);
-    }
+       nggak jelas mau diukur dari mana — buat kelompok pakai tombol -/+ */
+    if(on&&one) b.appendChild(mkGrip("t",i));
     w.appendChild(b);
   });
   renderTokSize();
+}
+function mkGrip(kind,i){
+  const g=document.createElement("span"); g.className="tokgrip";
+  g.dataset.i=i; g.dataset.kind=kind; g.title="Tarik buat ngatur ukuran";
+  return g;
+}
+function renderLabels(){
+  const w=$("boardWrap");
+  [...w.querySelectorAll(".blabel")].forEach(n=>n.remove());
+  if(!curBoard) return;
+  const one=selToks.size===1;
+  curBoard.labels.forEach((l,i)=>{
+    const on=selToks.has(pKey("l",i));
+    const b=document.createElement("div"); b.className="blabel"+(on?" sel":"");
+    b.dataset.i=i; b.dataset.kind="l";
+    b.style.left=(l.x*100)+"%"; b.style.top=(l.y*100)+"%";
+    b.style.setProperty("--k",String(labK(l)));
+    if(l.c) b.style.color=l.c;
+    b.textContent=l.t;
+    b.title=l.t+" — tarik buat mindahin, klik 2x buat ganti tulisan, klik kanan buat hapus";
+    if(on&&one) b.appendChild(mkGrip("l",i));
+    w.appendChild(b);
+  });
 }
 function renderTokSize(){
   const box=$("tokSize");
   const sel=selList();
   box.hidden=!sel.length;
+  $("boardAlign").hidden=sel.length<2;
   if(!sel.length) return;
-  const ks=sel.map(i=>tokK(curBoard.tokens[i]));
+  const ks=sel.map(pieceK);
   if(sel.length===1){
-    const t=curBoard.tokens[sel[0]], h=byId.get(t.id);
-    $("tokSizeName").textContent=h?h.name:t.id;
-    $("tokSizeVal").textContent=Math.round(ks[0]*100)+"%";
+    $("tokSizeName").textContent=pieceName(sel[0]);
   }else{
-    $("tokSizeName").textContent=sel.length+" hero";
-    const lo=Math.min(...ks), hi=Math.max(...ks);
-    $("tokSizeVal").textContent = lo===hi ? Math.round(lo*100)+"%"
-      : Math.round(lo*100)+"–"+Math.round(hi*100)+"%";
+    const nt=sel.filter(k=>pKind(k)==="t").length, nl=sel.length-nt;
+    $("tokSizeName").textContent=[nt?nt+" hero":"",nl?nl+" tulisan":""].filter(Boolean).join(" + ");
   }
-  $("tokSmaller").disabled=Math.min(...ks)<=TOK_MIN+1e-6;
-  $("tokBigger").disabled=Math.max(...ks)>=TOK_MAX-1e-6;
+  const lo=Math.min(...ks), hi=Math.max(...ks);
+  $("tokSizeVal").textContent = lo===hi ? Math.round(lo*100)+"%"
+    : Math.round(lo*100)+"–"+Math.round(hi*100)+"%";
+  $("tokSmaller").disabled=lo<=TOK_MIN+1e-6;
+  $("tokBigger").disabled=sel.every(k=>pieceK(k)>=pieceMax(k)-1e-6);
 }
-function setTokK(i,k,save){
-  const t=curBoard&&curBoard.tokens[i]; if(!t) return;
-  t.k=Math.min(TOK_MAX,Math.max(TOK_MIN,Math.round(k*100)/100));
-  const el=$("boardWrap").querySelector('.tok[data-i="'+i+'"]');
-  if(el) el.style.setProperty("--k",String(t.k));
+function setPieceK(key,k,save){
+  const o=piece(key); if(!o) return;
+  o.k=Math.min(pieceMax(key),Math.max(TOK_MIN,Math.round(k*100)/100));
+  const el=pieceEl(key);
+  if(el) el.style.setProperty("--k",String(o.k));
   renderTokSize();
   if(save!==false) saveBoard();
 }
+/* dipakai tes dan kode lama: ukuran token lewat nomor urutnya */
+function setTokK(i,k,save){ setPieceK(pKey("t",i),k,save); }
 function bumpTok(step){
   const sel=selList(); if(!sel.length) return;
-  sel.forEach(i=>setTokK(i,tokK(curBoard.tokens[i])+step,false));
+  snapBoard();
+  sel.forEach(k=>setPieceK(k,pieceK(k)+step,false));
   renderTokSize(); saveBoard();
 }
 /* Pilihan diubah tanpa ngebangun ulang elemennya.
@@ -2795,38 +3034,44 @@ function bumpTok(step){
    pas pointerdown — yang kejadian tiap kali narik token yang belum
    kepilih — elemen yang baru aja dikasih pointer capture ikut keapus,
    capture-nya ilang, dan seretannya putus. Hal yang sama bikin kotak
-   seleksi kedip-kedip, soalnya tiap gerakan ngebangun ulang 10 token.
-
-   Jadi ganti kelas sama gagangnya aja di tempat. */
+   seleksi kedip-kedip, soalnya tiap gerakan ngebangun ulang 10 token. */
 function syncSelDom(){
   const w=$("boardWrap"), one=selToks.size===1;
-  [...w.querySelectorAll(".tok")].forEach(el=>{
-    const i=+el.dataset.i, on=selToks.has(i);
+  [...w.querySelectorAll(".tok,.blabel")].forEach(el=>{
+    const key=pKey(el.dataset.kind,+el.dataset.i), on=selToks.has(key);
     el.classList.toggle("sel",on);
     const g=el.querySelector(".tokgrip");
-    if(on&&one&&!g){
-      const n=document.createElement("span"); n.className="tokgrip"; n.dataset.i=i;
-      n.title="Tarik buat ngatur ukuran"; el.appendChild(n);
-    }else if(g&&!(on&&one)) g.remove();
+    if(on&&one&&!g) el.appendChild(mkGrip(el.dataset.kind,+el.dataset.i));
+    else if(g&&!(on&&one)) g.remove();
   });
   renderTokSize();
 }
 function setSel(list){
-  selToks.clear(); arr(list).forEach(i=>selToks.add(i));
+  selToks.clear(); arr(list).forEach(k=>selToks.add(k));
   syncSelDom();
 }
-function toggleSel(i){
-  if(selToks.has(i)) selToks.delete(i); else selToks.add(i);
+function toggleSel(key){
+  if(selToks.has(key)) selToks.delete(key); else selToks.add(key);
   syncSelDom();
 }
 function delSel(){
   const sel=selList(); if(!sel.length) return;
-  const names=sel.map(i=>(byId.get(curBoard.tokens[i].id)||{name:"Token"}).name);
-  /* dihapus dari belakang biar indeks yang belum kehapus nggak geser */
-  sel.slice().reverse().forEach(i=>curBoard.tokens.splice(i,1));
-  selToks.clear(); renderTokens(); saveBoard();
-  toast(sel.length===1?names[0]+" diangkat dari papan."
-                      :sel.length+" hero diangkat dari papan.");
+  snapBoard();
+  const label=sel.length===1?pieceName(sel[0])+" diangkat dari papan."
+                            :sel.length+" item diangkat dari papan.";
+  /* dihapus dari belakang biar nomor urut yang belum kehapus nggak geser */
+  const ts=sel.filter(k=>pKind(k)==="t").map(pIdx).sort((a,b)=>b-a);
+  const ls=sel.filter(k=>pKind(k)==="l").map(pIdx).sort((a,b)=>b-a);
+  /* panah yang nyantol ke token yang kehapus ikut dibuang — kalau nggak,
+     panahnya nunjuk ke hero yang nggak ada dan nggak bisa dihapus lagi */
+  const gone=new Set(ts.map(i=>curBoard.tokens[i].u));
+  curBoard.arrows=curBoard.arrows.filter(a=>
+    !(a.from&&gone.has(a.from.u))&&!(a.to&&gone.has(a.to.u)));
+  curBoard.steps[curBoard.step].arrows=curBoard.arrows;
+  ts.forEach(i=>curBoard.tokens.splice(i,1));
+  ls.forEach(i=>curBoard.labels.splice(i,1));
+  selToks.clear(); renderBoardAll(); saveBoard();
+  toast(label);
 }
 /* the frame takes the map's own aspect ratio, so nothing is cropped
    and board coordinates land exactly where they do on the map */
@@ -2860,8 +3105,65 @@ function renderBoardSel(){
   const none=!boards.length;
   ["boardRename","boardDel","boardBg","boardPng","boardClear","boardUndo","toolErase"].forEach(id=>$(id).disabled=none);
 }
+function renderBoardAll(){
+  renderSteps(); renderTokens(); renderLabels(); drawStrokes();
+}
 function renderWhiteboard(){
-  renderBoardSel(); renderBoardBg(); renderTokens(); fitCanvas();
+  renderBoardSel(); renderBoardBg(); renderSteps(); renderTokens(); renderLabels();
+  fitCanvas(); syncUndoBtns();
+}
+
+/* ---- langkah ----
+   Tombol "Duplikat" yang bikin ini kepakai: bikin langkah 1, duplikat,
+   geser dikit, jadi langkah 2. Nyusun enam langkah rotasi jadi cepat. */
+function renderSteps(){
+  const box=$("stepBar"); if(!box) return;
+  box.textContent="";
+  if(!curBoard){ box.hidden=true; return; }
+  box.hidden=false;
+  curBoard.steps.forEach((s,i)=>{
+    const b=document.createElement("button"); b.type="button"; b.className="stepn";
+    b.textContent=String(i+1);
+    b.setAttribute("aria-pressed",String(i===curBoard.step));
+    const n=s.tokens.length+s.labels.length+s.arrows.length+s.strokes.length;
+    b.title="Langkah "+(i+1)+(n?" — "+n+" isi":" — kosong");
+    b.onclick=()=>gotoStep(i);
+    box.appendChild(b);
+  });
+  const add=document.createElement("button");
+  add.type="button"; add.className="stepn add"; add.textContent="+";
+  add.title="Tambah langkah kosong"; add.onclick=()=>addStep(false);
+  box.appendChild(add);
+  $("stepDup").disabled=false;
+  $("stepDel").disabled=curBoard.steps.length<2;
+  $("stepInfo").textContent="Langkah "+(curBoard.step+1)+" dari "+curBoard.steps.length;
+}
+function gotoStep(i){
+  if(!curBoard||i<0||i>=curBoard.steps.length||i===curBoard.step) return;
+  curBoard.step=i; bindStep(curBoard); selToks.clear();
+  renderBoardAll(); saveBoard();
+}
+function addStep(copy){
+  if(!curBoard) return;
+  snapBoard();
+  const src=curBoard.steps[curBoard.step];
+  const s=copy?fixStep(JSON.parse(JSON.stringify(src))):blankStep();
+  /* salinan langkah tetap pakai ID token yang sama, biar panah yang
+     nyantol ke hero itu kebawa dan masih nunjuk ke token yang bener */
+  if(copy) s.tokens.forEach((t,i)=>{ if(src.tokens[i]) t.u=src.tokens[i].u; });
+  curBoard.steps.splice(curBoard.step+1,0,s);
+  curBoard.step++; bindStep(curBoard); selToks.clear();
+  renderBoardAll(); saveBoard();
+  toast(copy?"Langkah "+(curBoard.step+1)+" — salinan langkah sebelumnya."
+            :"Langkah "+(curBoard.step+1)+" — kosong.");
+}
+function delStep(){
+  if(!curBoard||curBoard.steps.length<2) return;
+  snapBoard();
+  curBoard.steps.splice(curBoard.step,1);
+  curBoard.step=Math.min(curBoard.step,curBoard.steps.length-1);
+  bindStep(curBoard); selToks.clear();
+  renderBoardAll(); saveBoard(); toast("Langkah dihapus.");
 }
 function setBoard(id){
   curBoard=boards.find(b=>b.id===id)||boards[0]||null;
@@ -2892,11 +3194,15 @@ function boardDown(e){
   if(!curBoard||e.button===2) return;
   if(penMode==="select") return;      /* kotak seleksi yang ngurus, bukan pena */
   const p=relPos(e);
+  if(penMode==="arrow") return;   /* ditangani di boardWrap, lihat bawah */
   if(penMode==="erase"){
+    const ai=hitArrow(p);
+    if(ai>=0){ snapBoard(); curBoard.arrows.splice(ai,1); drawStrokes(); saveBoard(); return; }
     const i=hitStroke(p);
-    if(i>=0){ curBoard.strokes.splice(i,1); drawStrokes(); saveBoard(); }
+    if(i>=0){ snapBoard(); curBoard.strokes.splice(i,1); drawStrokes(); saveBoard(); }
     return;
   }
+  snapBoard();
   drawing=true; cur={c:penColor,w:penWidth,pts:[p]};
   curBoard.strokes.push(cur);
   boardCanvas().setPointerCapture(e.pointerId);
@@ -2908,36 +3214,75 @@ function boardMove(e){
   if(Math.hypot(p[0]-last[0],p[1]-last[1])<0.002) return;
   cur.pts.push(p); drawStrokes();
 }
-function boardUp(){ if(!drawing) return; drawing=false; cur=null; saveBoard(); }
+function boardUp(){
+  if(!drawing) return; drawing=false; cur=null; saveBoard();
+}
+/* token terdekat dalam jangkauan sentuh — dipakai buat nyantolin panah */
+function tokNear(p){
+  if(!curBoard) return null;
+  let best=null,bd=0.045;
+  curBoard.tokens.forEach(t=>{
+    const d=Math.hypot(t.x-p[0],t.y-p[1]);
+    const reach=0.028*tokK(t)+0.012;
+    if(d<Math.max(bd,reach)&&(!best||d<bd)){ best=t; bd=d; }
+  });
+  return best;
+}
+function hitArrow(p){
+  if(!curBoard) return -1;
+  for(let i=curBoard.arrows.length-1;i>=0;i--){
+    const a=curBoard.arrows[i];
+    const A=arrowEnd(a.from), B=arrowEnd(a.to); if(!A||!B) continue;
+    const dx=B[0]-A[0], dy=B[1]-A[1], L2=dx*dx+dy*dy; if(!L2) continue;
+    let t=((p[0]-A[0])*dx+(p[1]-A[1])*dy)/L2; t=Math.max(0,Math.min(1,t));
+    const d=Math.hypot(p[0]-(A[0]+t*dx),p[1]-(A[1]+t*dy));
+    if(d<0.018) return i;
+  }
+  return -1;
+}
 
 /* token drag + resize.
    Satu pointerdown bisa jadi tiga hal: narik gagang = ubah ukuran, geser
    token = pindah, lepas tanpa geser = pilih. Yang ketiga ini yang bikin
    gagang ukurannya muncul, jadi klik biasa nggak kehilangan fungsi lamanya. */
 let dragTok=null, sizeTok=null, marq=null;
+const PIECE_SEL=".tok,.blabel";
+function keyOfEl(el){ return pKey(el.dataset.kind||"t",+el.dataset.i); }
+
 $("boardWrap").addEventListener("pointerdown",e=>{
   if(e.button===2) return;
+  /* Mode Panah dicek paling awal: token itu elemen DOM di atas canvas, jadi
+     kalau ini ditaruh di handler canvas, narik panah DARI hero nggak pernah
+     kebaca — yang kejadian malah tokennya keseret. */
+  if(penMode==="arrow"){
+    const p=relPos(e), t=tokNear(p);
+    arrowDraft={from:t?{u:t.u}:{x:p[0],y:p[1]},to:{x:p[0],y:p[1]},
+      c:penColor,w:penWidth,d:arrowDash};
+    $("boardWrap").setPointerCapture(e.pointerId);
+    e.preventDefault(); return;
+  }
   const g=e.target.closest(".tokgrip");
   if(g){
-    const i=+g.dataset.i, t=curBoard&&curBoard.tokens[i]; if(!t) return;
+    const key=pKey(g.dataset.kind||"t",+g.dataset.i), o=piece(key); if(!o) return;
     const r=$("boardWrap").getBoundingClientRect();
-    const cx=r.left+t.x*r.width, cy=r.top+t.y*r.height;
-    sizeTok={i,cx,cy,d0:Math.hypot(e.clientX-cx,e.clientY-cy)||1,k0:tokK(t)};
+    const cx=r.left+o.x*r.width, cy=r.top+o.y*r.height;
+    snapBoard();
+    sizeTok={key,cx,cy,d0:Math.hypot(e.clientX-cx,e.clientY-cy)||1,k0:pieceK(key)};
     g.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation();
     return;
   }
-  const t=e.target.closest(".tok");
-  if(t){
-    const i=+t.dataset.i;
-    if(e.shiftKey){ toggleSel(i); e.preventDefault(); return; }
-    /* narik token yang udah ikut kepilih = narik satu kelompok; narik yang
-       di luar pilihan = pilihan lama dilepas, cuma dia yang kebawa */
-    if(!selToks.has(i)) setSel([i]);
+  const el=e.target.closest(PIECE_SEL);
+  if(el){
+    const key=keyOfEl(el);
+    if(e.shiftKey){ toggleSel(key); e.preventDefault(); return; }
+    /* narik yang udah ikut kepilih = narik satu kelompok; narik yang di
+       luar pilihan = pilihan lama dilepas, cuma dia yang kebawa */
+    if(!selToks.has(key)) setSel([key]);
     const sel=selList();
-    dragTok={i,moved:false,x0:e.clientX,y0:e.clientY,
-      start:sel.map(j=>({j,x:curBoard.tokens[j].x,y:curBoard.tokens[j].y})),
+    dragTok={key,moved:false,x0:e.clientX,y0:e.clientY,
+      start:sel.map(k=>({k,x:piece(k).x,y:piece(k).y})),
       p0:relPos(e)};
-    t.setPointerCapture(e.pointerId); e.preventDefault();
+    el.setPointerCapture(e.pointerId); e.preventDefault();
     return;
   }
   /* latar kosong: mode Pilih bikin kotak seleksi, mode lain biar digambar */
@@ -2952,9 +3297,14 @@ $("boardWrap").addEventListener("pointerdown",e=>{
   }
 });
 $("boardWrap").addEventListener("pointermove",e=>{
+  if(arrowDraft){
+    const p=relPos(e), t=tokNear(p);
+    arrowDraft.to=t?{u:t.u}:{x:p[0],y:p[1]};
+    drawStrokes(); return;
+  }
   if(sizeTok){
     const d=Math.hypot(e.clientX-sizeTok.cx,e.clientY-sizeTok.cy);
-    setTokK(sizeTok.i,sizeTok.k0*(d/sizeTok.d0),false);
+    setPieceK(sizeTok.key,sizeTok.k0*(d/sizeTok.d0),false);
     return;
   }
   if(marq){
@@ -2971,79 +3321,108 @@ $("boardWrap").addEventListener("pointermove",e=>{
   if(!dragTok) return;
   if(!dragTok.moved){
     if(Math.abs(e.clientX-dragTok.x0)+Math.abs(e.clientY-dragTok.y0)<5) return;
-    dragTok.moved=true;
-    dragTok.start.forEach(s=>{
-      const el=$("boardWrap").querySelector('.tok[data-i="'+s.j+'"]');
-      if(el) el.classList.add("drag");
-    });
+    dragTok.moved=true; snapBoard();
+    dragTok.start.forEach(s=>{ const el=pieceEl(s.k); if(el) el.classList.add("drag"); });
   }
   const p=relPos(e), dx=p[0]-dragTok.p0[0], dy=p[1]-dragTok.p0[1];
   dragTok.start.forEach(s=>{
-    const el=$("boardWrap").querySelector('.tok[data-i="'+s.j+'"]'); if(!el) return;
+    const el=pieceEl(s.k); if(!el) return;
     el.style.left=(Math.min(1,Math.max(0,s.x+dx))*100)+"%";
     el.style.top=(Math.min(1,Math.max(0,s.y+dy))*100)+"%";
   });
+  drawStrokes();                      /* panah ikut pindah sambil ditarik */
 });
 function marqHits(){
   if(!marq||!curBoard) return [];
   const lo=[Math.min(marq.x0,marq.x1),Math.min(marq.y0,marq.y1)];
   const hi=[Math.max(marq.x0,marq.x1),Math.max(marq.y0,marq.y1)];
-  const hit=curBoard.tokens.map((t,i)=>
-    (t.x>=lo[0]&&t.x<=hi[0]&&t.y>=lo[1]&&t.y<=hi[1])?i:-1).filter(i=>i>=0);
+  const inside=o=>o.x>=lo[0]&&o.x<=hi[0]&&o.y>=lo[1]&&o.y<=hi[1];
+  const hit=[];
+  curBoard.tokens.forEach((t,i)=>{ if(inside(t)) hit.push(pKey("t",i)); });
+  curBoard.labels.forEach((l,i)=>{ if(inside(l)) hit.push(pKey("l",i)); });
   return marq.add?[...new Set(marq.base.concat(hit))]:hit;
 }
 $("boardWrap").addEventListener("pointerup",e=>{
-  if(sizeTok){ const i=sizeTok.i; sizeTok=null; saveBoard();
-    const t=curBoard&&curBoard.tokens[i];
-    if(t) toast((byId.get(t.id)||{name:"Token"}).name+" — "+Math.round(tokK(t)*100)+"%");
+  if(arrowDraft){
+    const a=arrowDraft; arrowDraft=null;
+    const A=arrowEnd(a.from), B=arrowEnd(a.to);
+    /* panah sependek ini biasanya salah klik, bukan niat */
+    if(A&&B&&Math.hypot(B[0]-A[0],B[1]-A[1])>0.02){
+      snapBoard(); curBoard.arrows.push(a); saveBoard();
+      const src=a.from.u&&curBoard.tokens.find(t=>t.u===a.from.u);
+      toast(src?"Panah nyantol ke "+(byId.get(src.id)||{name:"hero"}).name:"Panah ditaruh.");
+    }
+    drawStrokes(); return;
+  }
+  if(sizeTok){ const key=sizeTok.key; sizeTok=null; saveBoard();
+    if(piece(key)) toast(pieceName(key)+" — "+Math.round(pieceK(key)*100)+"%");
     return; }
   if(marq){
     const hits=marqHits(); marq=null;
     const b=$("marqBox"); if(b) b.remove();
     setSel(hits);
-    if(hits.length) toast(hits.length+" hero kepilih — tarik buat gerakin bareng.");
+    if(hits.length) toast(hits.length+" item kepilih — tarik buat gerakin bareng.");
     return;
   }
   if(!dragTok) return;
   const d=dragTok; dragTok=null;
-  if(!d.moved){ setSel([d.i]); return; }   /* klik tanpa geser = pilih dia doang */
+  if(!d.moved){ setSel([d.key]); return; }   /* klik tanpa geser = pilih dia doang */
   const p=relPos(e), dx=p[0]-d.p0[0], dy=p[1]-d.p0[1];
   d.start.forEach(s=>{
-    const t=curBoard&&curBoard.tokens[s.j]; if(!t) return;
-    t.x=Math.min(1,Math.max(0,s.x+dx)); t.y=Math.min(1,Math.max(0,s.y+dy));
+    const o=piece(s.k); if(!o) return;
+    o.x=Math.min(1,Math.max(0,s.x+dx)); o.y=Math.min(1,Math.max(0,s.y+dy));
   });
-  renderTokens(); saveBoard();
+  renderTokens(); renderLabels(); drawStrokes(); saveBoard();
 });
-/* scroll di atas token = ubah ukuran. Non-passive supaya halamannya
-   nggak ikut kegulung waktu lagi ngatur ukuran. */
 $("boardWrap").addEventListener("wheel",e=>{
-  const el=e.target.closest(".tok"); if(!el) return;
+  const el=e.target.closest(PIECE_SEL); if(!el) return;
   e.preventDefault();
-  const i=+el.dataset.i, t=curBoard&&curBoard.tokens[i]; if(!t) return;
+  const key=keyOfEl(el); if(!piece(key)) return;
   /* scroll di atas salah satu yang kepilih = sekelompok ikut berubah */
-  if(selToks.has(i)) bumpTok(e.deltaY<0?TOK_STEP:-TOK_STEP);
-  else { setSel([i]); setTokK(i,tokK(t)+(e.deltaY<0?TOK_STEP:-TOK_STEP)); }
+  if(selToks.has(key)) bumpTok(e.deltaY<0?TOK_STEP:-TOK_STEP);
+  else { setSel([key]); snapBoard(); setPieceK(key,pieceK(key)+(e.deltaY<0?TOK_STEP:-TOK_STEP)); }
 },{passive:false});
 /* klik di latar kosong = lepas pilihan (kecuali lagi nambah pakai shift) */
 $("boardWrap").addEventListener("pointerdown",e=>{
-  if(selToks.size&&!e.target.closest(".tok")&&!e.shiftKey){ setSel([]); }
+  if(penMode==="arrow") return;
+  if(selToks.size&&!e.target.closest(PIECE_SEL)&&!e.shiftKey) setSel([]);
 });
 $("boardWrap").addEventListener("contextmenu",e=>{
-  const t=e.target.closest(".tok"); if(!t) return;
+  const el=e.target.closest(PIECE_SEL); if(!el) return;
   e.preventDefault();
-  const i=+t.dataset.i;
-  if(!curBoard||!curBoard.tokens[i]) return;
+  const key=keyOfEl(el); if(!piece(key)) return;
   /* klik kanan di salah satu yang kepilih ngangkat semuanya sekalian */
-  if(selToks.has(i)&&selToks.size>1){ delSel(); return; }
-  setSel([i]); delSel();
+  if(selToks.has(key)&&selToks.size>1){ delSel(); return; }
+  setSel([key]); delSel();
 });
+/* klik 2x tulisan buat ganti isinya */
+$("boardWrap").addEventListener("dblclick",e=>{
+  const el=e.target.closest(".blabel"); if(!el) return;
+  const key=keyOfEl(el), l=piece(key); if(!l) return;
+  const v=prompt("Tulisan:",l.t);
+  if(v===null) return;
+  snapBoard();
+  if(!v.trim()){ setSel([key]); delSel(); return; }
+  l.t=v.trim(); renderLabels(); saveBoard();
+});
+function addLabel(){
+  if(!curBoard){ toast("Bikin papan dulu."); return; }
+  const v=prompt("Tulisan apa?","");
+  if(v===null||!v.trim()) return;
+  snapBoard();
+  curBoard.labels.push({t:v.trim(),x:0.5,y:0.12+curBoard.labels.length*0.05,k:1,c:null});
+  renderLabels(); saveBoard();
+  setSel([pKey("l",curBoard.labels.length-1)]);
+  toast("Tulisan ditaruh — tarik buat mindahin, klik 2x buat ganti.");
+}
 function addToken(id){
   if(!curBoard){ toast("Bikin papan dulu."); return; }
   const n=curBoard.tokens.length;
   /* token baru ngikut ukuran token terakhir: biasanya lagi nyusun satu
      kelompok yang ukurannya sama, jadi nggak perlu diatur satu-satu */
   const last=curBoard.tokens[n-1];
-  curBoard.tokens.push({id,s:tokSide,k:last?tokK(last):1,
+  snapBoard();
+  curBoard.tokens.push({id,u:uid(),s:tokSide,k:last?tokK(last):1,
     x:0.5+((n%5)-2)*0.06,y:0.5+Math.floor(n/5)*0.07});
   renderTokens(); saveBoard();
   toast((byId.get(id)||{name:id}).name+" ditaruh — tarik buat mindahin, klik buat atur ukuran.");
@@ -3072,6 +3451,9 @@ async function boardToPng(){
     if(s.pts.length===1) ctx.lineTo(s.pts[0][0]*W+0.1,s.pts[0][1]*H);
     ctx.stroke();
   });
+  /* panah digambar sebelum token biar ujungnya ketutup bulatan heronya,
+     sama kayak di layar */
+  arr(curBoard.arrows).forEach(a=>drawArrow(ctx,W,H,a,kw));
   const RING={b:"#4d92d9",r:"#e0645c",n:"#f0ead8"};
   for(const t of curBoard.tokens){
     const h=byId.get(t.id); const R=Math.round(34*kw*tokK(t)), x=t.x*W, y=t.y*H;
@@ -3090,8 +3472,21 @@ async function boardToPng(){
     ctx.beginPath(); ctx.arc(x,y,R,0,Math.PI*2);
     ctx.strokeStyle=RING[t.s]||RING.n; ctx.lineWidth=Math.max(2,5*kw); ctx.stroke();
   }
+  arr(curBoard.labels).forEach(l=>{
+    ctx.save();
+    ctx.font="800 "+Math.round(21*kw*labK(l))+"px system-ui,sans-serif";
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.lineWidth=Math.max(2,5*kw*labK(l)); ctx.strokeStyle="rgba(0,0,0,.72)";
+    ctx.lineJoin="round";
+    ctx.strokeText(l.t,l.x*W,l.y*H);
+    ctx.fillStyle=l.c||"#ffffff";
+    ctx.fillText(l.t,l.x*W,l.y*H);
+    ctx.restore();
+  });
   const blob=await new Promise(r=>out.toBlob(r,"image/png"));
-  await saveFile((curBoard.name||"papan").replace(/[^\w\-]+/g,"_")+".png",blob);
+  const nm=(curBoard.name||"papan").replace(/[^\w\-]+/g,"_")
+    +(curBoard.steps.length>1?"-langkah"+(curBoard.step+1):"");
+  await saveFile(nm+".png",blob);
   toast("PNG kesimpen.");
 }
 
@@ -3113,7 +3508,7 @@ async function exportAll(){
     return o;
   });
   const boardsOut=boards.map(b=>{
-    const o=JSON.parse(JSON.stringify(b));
+    const o=JSON.parse(JSON.stringify(boardDoc(b)));
     if(b.bg){ o.bg="images/maps/"+b.id; want.set(b.bg,"images/maps/"+b.id); }
     return o;
   });
@@ -5704,21 +6099,69 @@ $("widths").onclick=e=>{ const b=e.target.closest("button"); if(!b) return;
   penWidth=+b.dataset.v;
   [...$("widths").children].forEach(x=>x.setAttribute("aria-pressed",String(x===b))); };
 $("toolErase").onclick=()=>setPenMode(penMode==="erase"?"pen":"erase");
-$("boardUndo").onclick=()=>{ if(!curBoard||!curBoard.strokes.length) return;
-  curBoard.strokes.pop(); drawStrokes(); saveBoard(true); };
+$("boardUndo").onclick=boardUndoStep;
 $("boardClear").onclick=()=>{ if(!curBoard) return;
-  curBoard.strokes=[]; curBoard.tokens=[]; selToks.clear();
-  drawStrokes(); renderTokens(); saveBoard(true); toast("Papan dibersihin."); };
+  snapBoard();
+  curBoard.steps[curBoard.step]=blankStep(); bindStep(curBoard); selToks.clear();
+  renderBoardAll(); saveBoard(true); toast("Langkah ini dibersihin."); };
 
-/* ---- alat Pilih ---- */
+/* ---- alat papan ---- */
 function setPenMode(m){
   penMode=m;
   $("toolErase").classList.toggle("on",m==="erase");
   $("toolSelect").classList.toggle("on",m==="select");
-  boardCanvas().className="boardcv "+(m==="erase"?"erase":m==="select"?"sel":"pen");
+  $("toolArrow").classList.toggle("on",m==="arrow");
+  boardCanvas().className="boardcv "+(m==="erase"?"erase":m==="select"?"sel":m==="arrow"?"arrow":"pen");
   if(m!=="select") setSel([]);
 }
 $("toolSelect").onclick=()=>setPenMode(penMode==="select"?"pen":"select");
+$("toolArrow").onclick=()=>setPenMode(penMode==="arrow"?"pen":"arrow");
+$("boardText").onclick=addLabel;
+$("boardRedo").onclick=boardRedoStep;
+$("stepDup").onclick=()=>addStep(true);
+$("stepDel").onclick=delStep;
+
+/* ---- rapihin posisi ----
+   Nyusun formasi 5 orang berjajar itu nggak mungkin rapi kalau manual. */
+$("boardAlign").onclick=e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  const sel=selList(); if(sel.length<2) return;
+  snapBoard();
+  const os=sel.map(piece);
+  const a=b.dataset.a;
+  if(a==="l"){ const v=Math.min(...os.map(o=>o.x)); os.forEach(o=>o.x=v); }
+  else if(a==="r"){ const v=Math.max(...os.map(o=>o.x)); os.forEach(o=>o.x=v); }
+  else if(a==="cx"){ const v=os.reduce((s2,o)=>s2+o.x,0)/os.length; os.forEach(o=>o.x=v); }
+  else if(a==="t"){ const v=Math.min(...os.map(o=>o.y)); os.forEach(o=>o.y=v); }
+  else if(a==="b"){ const v=Math.max(...os.map(o=>o.y)); os.forEach(o=>o.y=v); }
+  else if(a==="cy"){ const v=os.reduce((s2,o)=>s2+o.y,0)/os.length; os.forEach(o=>o.y=v); }
+  else if(a==="dx"||a==="dy"){
+    const ax=a==="dx"?"x":"y";
+    const sorted=os.slice().sort((p1,p2)=>p1[ax]-p2[ax]);
+    const lo=sorted[0][ax], hi=sorted[sorted.length-1][ax];
+    const gap=(hi-lo)/(sorted.length-1);
+    sorted.forEach((o,i)=>o[ax]=lo+gap*i);
+  }
+  renderTokens(); renderLabels(); drawStrokes(); saveBoard();
+};
+function dupSel(){
+  const sel=selList(); if(!sel.length) return;
+  snapBoard();
+  const keys=[];
+  sel.filter(k=>pKind(k)==="t").forEach(k=>{
+    const t=piece(k);
+    curBoard.tokens.push(Object.assign({},t,{u:uid(),
+      x:Math.min(1,t.x+0.04),y:Math.min(1,t.y+0.04)}));
+    keys.push(pKey("t",curBoard.tokens.length-1));
+  });
+  sel.filter(k=>pKind(k)==="l").forEach(k=>{
+    const l=piece(k);
+    curBoard.labels.push(Object.assign({},l,{x:Math.min(1,l.x+0.04),y:Math.min(1,l.y+0.04)}));
+    keys.push(pKey("l",curBoard.labels.length-1));
+  });
+  renderTokens(); renderLabels(); saveBoard(); setSel(keys);
+  toast(keys.length+" digandain.");
+}
 
 /* ---- ukuran token ---- */
 $("tokSmaller").onclick=()=>bumpTok(-TOK_STEP);
@@ -5731,10 +6174,28 @@ document.addEventListener("keydown",e=>{
   if(view!=="board") return;
   const el=document.activeElement;
   if(el&&/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
-  if((e.ctrlKey||e.metaKey)&&e.key==="a"){
+  const mod=e.ctrlKey||e.metaKey;
+  if(mod&&e.key.toLowerCase()==="z"){
+    e.preventDefault(); e.stopPropagation();
+    if(e.shiftKey) boardRedoStep(); else boardUndoStep();
+    return;
+  }
+  if(mod&&e.key.toLowerCase()==="d"){ e.preventDefault(); dupSel(); return; }
+  if(!mod&&(e.key==="ArrowLeft"||e.key==="ArrowRight")&&curBoard){
     e.preventDefault();
-    if(curBoard){ setSel(curBoard.tokens.map((_,i)=>i)); setPenMode("select");
-      toast(curBoard.tokens.length+" hero kepilih."); }
+    gotoStep(curBoard.step+(e.key==="ArrowRight"?1:-1));
+    return;
+  }
+  if(mod&&e.key==="a"){
+    e.preventDefault();
+    if(curBoard){
+      /* kuncinya berkode jenis sekarang — nomor urut doang bikin
+         pIdx/pKind meledak waktu dipakai */
+      const all=curBoard.tokens.map((_,i)=>pKey("t",i))
+        .concat(curBoard.labels.map((_,i)=>pKey("l",i)));
+      setSel(all); setPenMode("select");
+      if(all.length) toast(all.length+" item kepilih.");
+    }
     return;
   }
   if(!selToks.size) return;
@@ -5858,7 +6319,9 @@ $("btnTheme").onclick=()=>{
 };
 document.addEventListener("keydown",e=>{
   if(e.target.matches("input,select,textarea")) return;
-  if((e.metaKey||e.ctrlKey)&&e.key==="z"){ e.preventDefault(); undo(); }
+  /* di tab Papan, Ctrl+Z punya arti sendiri (undo papan) — jangan sampai
+     satu tekanan ngebatalin draft juga */
+  if((e.metaKey||e.ctrlKey)&&e.key==="z"&&view!=="board"){ e.preventDefault(); undo(); }
   else if(e.key==="/"){ e.preventDefault();
     const box=view==="hero"?$("hq"):view==="rel"?$("rq"):view==="board"?$("bq"):$("q");
     if(box) box.focus(); }
